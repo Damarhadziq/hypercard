@@ -1,0 +1,137 @@
+import { eq, and, ne, desc, ilike, or, sql } from 'drizzle-orm';
+import { db } from '../db/index.js';
+import { user } from '../db/schema.js';
+import { auth } from '../lib/auth.js';
+
+export interface CreateAdminInput {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export const adminService = {
+  async getAll(search?: string, page = 1, limit = 50) {
+    const offset = (page - 1) * limit;
+    const conditions = search
+      ? or(
+          ilike(user.name, `%${search}%`),
+          ilike(user.email, `%${search}%`),
+          ilike(user.role, `%${search}%`)
+        )
+      : undefined;
+
+    const [data, countResult] = await Promise.all([
+      db
+        .select({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          lastLogin: user.lastLogin,
+          createdAt: user.createdAt,
+        })
+        .from(user)
+        .where(conditions)
+        .orderBy(desc(user.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(user)
+        .where(conditions),
+    ]);
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total: countResult[0]?.count ?? 0,
+      },
+    };
+  },
+
+  async create(input: CreateAdminInput) {
+    // Use Better Auth's API to create users so passwords are properly hashed
+    const newUser = await (auth.api.signUpEmail as unknown as (input: {
+      body: {
+        name: string;
+        email: string;
+        password: string;
+        role: string;
+        status: string;
+      };
+    }) => Promise<unknown>)({
+      body: {
+        name: input.name,
+        email: input.email,
+        password: input.password,
+        role: 'admin',
+        status: 'active',
+      },
+    });
+
+    return newUser;
+  },
+
+  async updatePassword(id: string, password: string) {
+    // Use Better Auth admin plugin to set password
+    await (auth.api.setPassword as unknown as (input: { body: { userId: string; newPassword: string } }) => Promise<unknown>)({
+      body: {
+        userId: id,
+        newPassword: password,
+      },
+    });
+
+    return true;
+  },
+
+  async toggleStatus(id: string) {
+    // Prevent toggling superadmin
+    const [targetUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, id))
+      .limit(1);
+
+    if (!targetUser) return null;
+    if (targetUser.role === 'superadmin') return targetUser;
+
+    const newStatus = targetUser.status === 'active' ? 'inactive' : 'active';
+
+    const [updated] = await db
+      .update(user)
+      .set({ status: newStatus, updatedAt: new Date() })
+      .where(eq(user.id, id))
+      .returning();
+
+    return updated ?? null;
+  },
+
+  async delete(id: string) {
+    // Prevent deleting superadmins
+    const [targetUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, id))
+      .limit(1);
+
+    if (!targetUser || targetUser.role === 'superadmin') {
+      return false;
+    }
+
+    await db.delete(user).where(
+      and(eq(user.id, id), ne(user.role, 'superadmin'))
+    );
+
+    return true;
+  },
+
+  async touchLogin(id: string) {
+    await db
+      .update(user)
+      .set({ lastLogin: new Date(), updatedAt: new Date() })
+      .where(eq(user.id, id));
+  },
+};
