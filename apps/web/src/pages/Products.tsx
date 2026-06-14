@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input } from '@pokemon-finance/ui';
 import { Pencil, PlusCircle, Search, Trash2, X } from 'lucide-react';
 import type { Product } from '../store/useStore';
@@ -90,6 +90,8 @@ function ProductImage({ product, compact = false }: { product: Product; compact?
       <img
         src={product.image}
         alt={product.name}
+        loading="lazy"
+        decoding="async"
         className="h-full w-full object-contain"
       />
     );
@@ -122,11 +124,57 @@ function SpecPill({ label, value }: { label: string; value?: string }) {
   );
 }
 
+const ProductGridCard = memo(function ProductGridCard({
+  product,
+  onSelect,
+}: {
+  product: Product;
+  onSelect: (product: Product) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(product)}
+      className="group overflow-hidden rounded-lg border border-finance-200 bg-white text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#d6b39f] focus:outline-none active:translate-y-0 active:border-[#c89f88] active:bg-finance-50 [contain-intrinsic-size:360px] [content-visibility:auto]"
+    >
+      <div className="relative aspect-[3/4] overflow-hidden bg-finance-100">
+        <div className="h-full w-full transition-transform duration-300 ease-out group-hover:scale-[1.045]">
+          <ProductImage product={product} compact />
+        </div>
+        <span className={`absolute right-2 top-2 rounded-md px-2 py-1 text-[11px] font-bold shadow-sm ${product.stock > 0 ? 'bg-white text-green-700' : 'bg-white text-red-700'}`}>
+          {product.stock > 0 ? `Stok ${product.stock}` : 'Habis'}
+        </span>
+      </div>
+
+      <div className="grid h-36 grid-rows-[22px_18px_42px_24px] gap-1 p-3">
+        <div className="min-w-0">
+          <h3 className="truncate text-sm font-semibold leading-5 text-finance-950" title={product.name}>{product.name}</h3>
+        </div>
+
+        <p className="truncate text-xs text-finance-500">{product.setName || product.category}</p>
+
+        <div className="flex min-w-0 flex-wrap content-start gap-1 overflow-hidden">
+          <span className="surface-pill h-fit rounded px-1.5 py-0.5 text-[11px] font-medium">{product.condition}</span>
+          <span
+            title={getRarityLabel(product.rarity)}
+            className="surface-pill h-fit max-w-full truncate rounded px-1.5 py-0.5 text-[11px] font-semibold"
+          >
+            {getRarityCode(product.rarity)}
+          </span>
+        </div>
+
+        <p className={`self-end whitespace-nowrap text-base font-extrabold tracking-tight ${getProfitTextClass(product.sellPrice, product.buyPrice)}`}>Rp {product.sellPrice.toLocaleString('id-ID')}</p>
+      </div>
+    </button>
+  );
+});
+
 export default function Products() {
   const productsQuery = useProducts({ limit: 1000 });
   const products = productsQuery.data?.data ?? [];
   const { createProduct, updateProduct, deleteProduct } = useProductMutations();
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -134,18 +182,27 @@ export default function Products() {
   const [selectedApiCard, setSelectedApiCard] = useState<PokemonTcgCard | null>(null);
   const { notify, confirm } = useFeedback();
 
-  const activeProducts = products.filter((product) => product.stock > 0);
-  const filteredProducts = activeProducts.filter((product) => {
-    const query = searchQuery.toLowerCase();
-    return [
-      product.name,
-      product.category,
-      product.condition,
-      product.setName,
-      product.rarity,
-      product.cardNumber,
-    ].some((value) => value?.toLowerCase().includes(query));
-  });
+  const filteredProducts = useMemo(() => {
+    const query = deferredSearchQuery.trim().toLowerCase();
+
+    return products.filter((product) => {
+      if (product.stock <= 0) return false;
+      if (!query) return true;
+
+      return [
+        product.name,
+        product.category,
+        product.condition,
+        product.setName,
+        product.rarity,
+        product.cardNumber,
+      ].some((value) => value?.toLowerCase().includes(query));
+    });
+  }, [deferredSearchQuery, products]);
+
+  const selectProduct = useCallback((product: Product) => {
+    setSelectedProduct(product);
+  }, []);
 
   const openAddDrawer = () => {
     setEditingProduct(null);
@@ -292,41 +349,7 @@ export default function Products() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {filteredProducts.map((product) => (
-            <button
-              key={product.id}
-              type="button"
-              onClick={() => setSelectedProduct(product)}
-              className="group animate-soft-in overflow-hidden rounded-lg border border-finance-200 bg-white text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#d6b39f] focus:outline-none active:translate-y-0 active:border-[#c89f88] active:bg-finance-50"
-            >
-              <div className="relative aspect-[3/4] overflow-hidden bg-finance-100">
-                <div className="h-full w-full transition-transform duration-300 ease-out group-hover:scale-[1.045]">
-                  <ProductImage product={product} compact />
-                </div>
-                <span className={`absolute right-2 top-2 rounded-md px-2 py-1 text-[11px] font-bold shadow-sm ${product.stock > 0 ? 'bg-white text-green-700' : 'bg-white text-red-700'}`}>
-                  {product.stock > 0 ? `Stok ${product.stock}` : 'Habis'}
-                </span>
-              </div>
-
-              <div className="grid h-36 grid-rows-[22px_18px_42px_24px] gap-1 p-3">
-                <div className="min-w-0">
-                  <h3 className="truncate text-sm font-semibold leading-5 text-finance-950" title={product.name}>{product.name}</h3>
-                </div>
-
-                <p className="truncate text-xs text-finance-500">{product.setName || product.category}</p>
-
-                <div className="flex min-w-0 flex-wrap content-start gap-1 overflow-hidden">
-                  <span className="surface-pill h-fit rounded px-1.5 py-0.5 text-[11px] font-medium">{product.condition}</span>
-                  <span
-                    title={getRarityLabel(product.rarity)}
-                    className="surface-pill h-fit max-w-full truncate rounded px-1.5 py-0.5 text-[11px] font-semibold"
-                  >
-                    {getRarityCode(product.rarity)}
-                  </span>
-                </div>
-
-                <p className={`self-end whitespace-nowrap text-base font-extrabold tracking-tight ${getProfitTextClass(product.sellPrice, product.buyPrice)}`}>Rp {product.sellPrice.toLocaleString('id-ID')}</p>
-              </div>
-            </button>
+            <ProductGridCard key={product.id} product={product} onSelect={selectProduct} />
           ))}
         </div>
       )}

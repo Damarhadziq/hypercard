@@ -165,14 +165,16 @@ export default function PokemonCardPicker({
             className="h-11 pl-10 pr-10"
           />
           {query && (
-            <button
-              type="button"
-              onClick={handleClearSearch}
-              className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-finance-400 hover:bg-finance-100 hover:text-finance-900"
-              aria-label="Hapus pencarian kartu"
-            >
-              <X size={15} />
-            </button>
+            <div className="absolute inset-y-0 right-2 z-10 flex items-center">
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="flex h-7 w-7 items-center justify-center rounded-md p-0 leading-none text-finance-400 hover:bg-finance-100 hover:text-finance-900"
+                aria-label="Hapus pencarian kartu"
+              >
+                <X size={15} className="block" />
+              </button>
+            </div>
           )}
         </div>
         <div className="min-w-0">

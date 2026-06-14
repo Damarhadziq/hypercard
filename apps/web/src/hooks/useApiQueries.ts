@@ -27,8 +27,8 @@ export const queryKeys = {
 
 function useInvalidateAppData() {
   const queryClient = useQueryClient();
-  return async () => {
-    await Promise.all([
+  return () => {
+    void Promise.all([
       queryClient.invalidateQueries({ queryKey: ['products'] }),
       queryClient.invalidateQueries({ queryKey: ['customers'] }),
       queryClient.invalidateQueries({ queryKey: ['transactions'] }),
