@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import { BarChart3, Home, MoreHorizontal, PanelLeftClose, PanelLeftOpen, ShoppingBag, Users, FileText, CreditCard, LogOut, UserCog } from 'lucide-react';
 import type { Session } from './pages/Login';
 import { FeedbackProvider } from './components/Feedback';
-import { queryKeys, useAuthSession, useSignOut } from './hooks/useApiQueries';
+import { queryKeys, useAuthSession, useCustomers, useProducts, useSignOut, useTransactions } from './hooks/useApiQueries';
 import { customersService } from './services/customers';
 import { productsService } from './services/products';
 import { transactionsService } from './services/transactions';
@@ -47,6 +47,12 @@ function PageFallback() {
 function AppLayout({ children, session, onLogout }: { children: React.ReactNode; session: Session; onLogout: () => void }) {
   const location = useLocation();
   const currentPath = location.pathname;
+  const productsCountQuery = useProducts({ page: 1, limit: 1 });
+  const customersCountQuery = useCustomers({ page: 1, limit: 1 });
+  const transactionsCountQuery = useTransactions({ page: 1, limit: 1 });
+  const productCount = productsCountQuery.data?.pagination.total;
+  const customerCount = customersCountQuery.data?.pagination.total;
+  const transactionCount = transactionsCountQuery.data?.pagination.total;
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isMoreOpen, setIsMoreOpen] = React.useState(false);
   const sidebarResizeTimerRef = React.useRef<number | null>(null);
@@ -109,10 +115,10 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
         </div>
         <nav className="relative z-10 flex-1 space-y-1 p-4">
           <NavItem to="/" icon={<Home size={20} />} label="Dashboard" active={currentPath === '/'} collapsed={isSidebarCollapsed} />
-          <NavItem to="/products" icon={<ShoppingBag size={20} />} label="Produk" active={currentPath.startsWith('/products')} collapsed={isSidebarCollapsed} />
-          <NavItem to="/customers" icon={<Users size={20} />} label="Pembeli" active={currentPath.startsWith('/customers')} collapsed={isSidebarCollapsed} />
+          <NavItem to="/products" icon={<ShoppingBag size={20} />} label="Produk" count={productCount} active={currentPath.startsWith('/products')} collapsed={isSidebarCollapsed} />
+          <NavItem to="/customers" icon={<Users size={20} />} label="Pembeli" count={customerCount} active={currentPath.startsWith('/customers')} collapsed={isSidebarCollapsed} />
           <NavItem to="/invoices" icon={<FileText size={20} />} label="Invoice" active={currentPath.startsWith('/invoices')} collapsed={isSidebarCollapsed} />
-          <NavItem to="/transactions" icon={<CreditCard size={20} />} label="Transaksi" active={currentPath.startsWith('/transactions')} collapsed={isSidebarCollapsed} />
+          <NavItem to="/transactions" icon={<CreditCard size={20} />} label="Transaksi" count={transactionCount} active={currentPath.startsWith('/transactions')} collapsed={isSidebarCollapsed} />
           <NavItem to="/reports" icon={<BarChart3 size={20} />} label="Laporan" active={currentPath.startsWith('/reports')} collapsed={isSidebarCollapsed} />
           {session.role === 'superadmin' && (
             <NavItem to="/admins" icon={<UserCog size={20} />} label="Admin" active={currentPath.startsWith('/admins')} collapsed={isSidebarCollapsed} />
@@ -213,11 +219,32 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
   );
 }
 
-function NavItem({ to, icon, label, active = false, collapsed = false }: { to: string, icon: React.ReactNode, label: string, active?: boolean, collapsed?: boolean }) {
+function formatSidebarCount(count: number) {
+  if (count > 999) return '999+';
+  return count.toLocaleString('id-ID');
+}
+
+function NavItem({
+  to,
+  icon,
+  label,
+  count,
+  active = false,
+  collapsed = false,
+}: {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  count?: number;
+  active?: boolean;
+  collapsed?: boolean;
+}) {
+  const hasCount = typeof count === 'number' && count > 0;
+
   return (
     <Link
       to={to}
-      title={collapsed ? label : undefined}
+      title={collapsed ? `${label}${hasCount ? ` (${count})` : ''}` : undefined}
       className={`group relative flex h-11 items-center overflow-hidden rounded-lg border py-2.5 text-sm font-medium transition-[background-color,border-color,color,box-shadow,padding] duration-200 ease-out active:brightness-95 ${collapsed ? 'justify-center px-0' : 'justify-start px-3'} ${
         active 
           ? 'border-accent/45 bg-[linear-gradient(90deg,rgba(214,180,93,0.18),rgba(220,38,38,0.07)_58%,rgba(20,20,23,0.72))] text-accent shadow-[inset_3px_0_0_#d6b45d,0_10px_28px_rgba(0,0,0,0.16)]' 
@@ -227,9 +254,17 @@ function NavItem({ to, icon, label, active = false, collapsed = false }: { to: s
       <span className="shrink-0 text-inherit transition-colors">
         {icon}
       </span>
-      <span className={`${collapsed ? 'ml-0 max-w-0 opacity-0' : 'ml-3 max-w-40 opacity-100'} min-w-0 truncate transition-[margin,max-width,opacity] duration-200 ease-out`}>
+      <span className={`${collapsed ? 'ml-0 max-w-0 opacity-0' : 'ml-3 max-w-40 flex-1 opacity-100'} min-w-0 truncate transition-[margin,max-width,opacity] duration-200 ease-out`}>
         {label}
       </span>
+      {hasCount && (
+        <span
+          className={`${collapsed ? 'absolute right-1.5 top-1 min-w-4 px-1 text-[9px]' : 'ml-2 min-w-6 px-2 text-[10px]'} flex h-5 shrink-0 items-center justify-center rounded-full border border-accent/25 bg-accent/12 font-bold tabular-nums text-accent transition-all duration-200`}
+          aria-label={`${count} ${label.toLowerCase()}`}
+        >
+          {formatSidebarCount(count)}
+        </span>
+      )}
     </Link>
   );
 }
