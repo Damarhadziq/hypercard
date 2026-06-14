@@ -11,6 +11,7 @@ import customerRoutes from './routes/customer.routes.js';
 import transactionRoutes from './routes/transaction.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
+import pokemonRoutes from './routes/pokemon.routes.js';
 
 const app = express();
 
@@ -68,6 +69,7 @@ app.get('/api/health/db', async (_req, res) => {
   }
 });
 
+app.use('/api/pokemon', pokemonRoutes);
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 60 }), authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);

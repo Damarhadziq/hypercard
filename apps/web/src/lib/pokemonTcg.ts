@@ -1,3 +1,5 @@
+import { API_ROOT } from '../services/config';
+
 export interface PokemonTcgCard {
   id: string;
   name: string;
@@ -41,8 +43,8 @@ export interface PokemonTcgSearchResult {
   totalCount: number;
 }
 
-const API_URL = 'https://api.pokemontcg.io/v2/cards';
-const SETS_URL = 'https://api.pokemontcg.io/v2/sets';
+const API_URL = `${API_ROOT}/pokemon/cards`;
+const SETS_URL = `${API_ROOT}/pokemon/sets`;
 const PAGE_SIZE = 24;
 const REQUEST_TIMEOUT_MS = 12000;
 const searchCache = new Map<string, PokemonTcgSearchResult>();
