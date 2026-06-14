@@ -7,12 +7,13 @@ import * as schema from '../db/schema.js';
 
 const trustedOrigins = Array.from(new Set([
   ...env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean),
+  ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
   'http://localhost:5173',
   'http://localhost:5174',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
 ]));
-const usesSecureCrossSiteCookies = env.BETTER_AUTH_URL.startsWith('https://');
+const usesSecureCookies = env.BETTER_AUTH_URL.startsWith('https://');
 
 export const auth = (betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -55,10 +56,10 @@ export const auth = (betterAuth({
   },
 
   advanced: {
-    useSecureCookies: usesSecureCrossSiteCookies,
-    defaultCookieAttributes: usesSecureCrossSiteCookies
+    useSecureCookies: usesSecureCookies,
+    defaultCookieAttributes: usesSecureCookies
       ? {
-          sameSite: 'none',
+          sameSite: 'lax',
           secure: true,
           httpOnly: true,
         }

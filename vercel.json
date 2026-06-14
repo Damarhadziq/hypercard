@@ -1,12 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "installCommand": "npm --prefix apps/web ci",
+  "installCommand": "npm --prefix apps/web ci && npm --prefix apps/api ci",
   "buildCommand": "npm --prefix apps/web run build",
   "outputDirectory": "apps/web/dist",
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
     }
   ]
