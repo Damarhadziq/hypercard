@@ -2,6 +2,11 @@
   "name": "pokemon-finance",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "packages/ui"
+  ],
   "engines": {
     "node": "22.x"
   }

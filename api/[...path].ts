@@ -1,4 +1,4 @@
-import app from '../apps/api/src/app';
+import app from '../apps/api/dist/app.js';
 
 export default function handler(
   req: Parameters<typeof app>[0],
