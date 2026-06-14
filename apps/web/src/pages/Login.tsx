@@ -95,7 +95,7 @@ export default function Login({ onLogin }: LoginProps) {
 
   return (
     <main className="premium-dark relative min-h-screen overflow-hidden bg-[#050506] text-white">
-      <section className="relative flex min-h-screen items-center justify-center px-4 md:hidden">
+      <section className="relative flex min-h-screen items-center justify-center px-4 sm:hidden">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent" />
         <Card className="animate-soft-in w-full max-w-sm border-accent/25 bg-[#0c0c0f] shadow-xl shadow-black/40">
           <CardHeader className="space-y-3 pb-4 text-center">
@@ -111,7 +111,7 @@ export default function Login({ onLogin }: LoginProps) {
         </Card>
       </section>
 
-      <section className="hidden min-h-screen grid-cols-[30%_1fr] gap-8 py-4 pl-20 pr-4 md:grid">
+      <section className="hidden min-h-screen grid-cols-[minmax(270px,38%)_1fr] gap-4 py-4 pl-6 pr-4 sm:grid lg:grid-cols-[30%_1fr] lg:gap-8 lg:pl-20">
         <div className="relative flex min-h-[calc(100vh-2rem)] flex-col overflow-hidden">
           <img
             src="/login-hypercard-bg.png"
