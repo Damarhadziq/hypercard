@@ -26,7 +26,7 @@ export function errorHandler(
 
     const status = (err as Error & { status?: number }).status ?? 500;
     res.status(status).json({
-      error: err.message || 'Internal server error',
+      error: status >= 500 ? 'Terjadi kesalahan pada server' : (err.message || 'Request gagal diproses'),
     });
     return;
   }

@@ -1,4 +1,4 @@
-import { and, eq, ilike, lte, or, sql, desc, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import {
   transactions,
@@ -18,8 +18,14 @@ export interface CreateTransactionInput {
   customerId: string;
   items: CreateTransactionItemInput[];
   subtotal: number;
-  discount: number;
   shippingCost?: number;
+  shippingCourier?: string;
+  shippingService?: string;
+  shippingDescription?: string;
+  shippingEtd?: string;
+  shippingWeight?: number;
+  shippingOrigin?: string;
+  shippingDestination?: string;
   total: number;
   paymentMethod?: 'Mandiri' | 'BCA';
   mandiriAccountNumber?: string;
@@ -30,8 +36,25 @@ export interface CreateTransactionInput {
   date?: string;
 }
 
+export type TransactionSort = 'newest' | 'oldest' | 'price-asc' | 'price-desc';
+export type TransactionStatusFilter = 'all' | 'Lunas' | 'Belum Dibayar';
+
+export interface ListTransactionInput {
+  search?: string;
+  page?: number;
+  limit?: number;
+  sort?: TransactionSort;
+  status?: TransactionStatusFilter;
+}
+
 export const transactionService = {
-  async getAll(search?: string, page = 1, limit = 50) {
+  async getAll({
+    search,
+    page = 1,
+    limit = 50,
+    sort = 'newest',
+    status = 'all',
+  }: ListTransactionInput = {}) {
     const offset = (page - 1) * limit;
 
     const todayEnd = new Date();
@@ -44,9 +67,18 @@ export const transactionService = {
           ilike(customers.name, `%${search}%`)
         )
       : undefined;
-    const conditions = searchConditions
-      ? and(lte(transactions.date, todayEnd), searchConditions)
-      : lte(transactions.date, todayEnd);
+    const conditions = [lte(transactions.date, todayEnd)];
+    if (searchConditions) conditions.push(searchConditions);
+    if (status !== 'all') conditions.push(eq(transactions.status, status));
+
+    const whereConditions = and(...conditions);
+    const orderBy = sort === 'oldest'
+      ? asc(transactions.date)
+      : sort === 'price-asc'
+        ? asc(transactions.total)
+        : sort === 'price-desc'
+          ? desc(transactions.total)
+          : desc(transactions.date);
 
     const [data, countResult] = await Promise.all([
       db
@@ -61,6 +93,13 @@ export const transactionService = {
           subtotal: transactions.subtotal,
           discount: transactions.discount,
           shippingCost: transactions.shippingCost,
+          shippingCourier: transactions.shippingCourier,
+          shippingService: transactions.shippingService,
+          shippingDescription: transactions.shippingDescription,
+          shippingEtd: transactions.shippingEtd,
+          shippingWeight: transactions.shippingWeight,
+          shippingOrigin: transactions.shippingOrigin,
+          shippingDestination: transactions.shippingDestination,
           total: transactions.total,
           status: transactions.status,
           paymentMethod: transactions.paymentMethod,
@@ -74,15 +113,15 @@ export const transactionService = {
         })
         .from(transactions)
         .leftJoin(customers, eq(transactions.customerId, customers.id))
-        .where(conditions)
-        .orderBy(desc(transactions.date))
+        .where(whereConditions)
+        .orderBy(orderBy, desc(transactions.createdAt))
         .limit(limit)
         .offset(offset),
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(transactions)
         .leftJoin(customers, eq(transactions.customerId, customers.id))
-        .where(conditions),
+        .where(whereConditions),
     ]);
 
     const transactionIds = data.map((transaction) => transaction.id);
@@ -144,6 +183,13 @@ export const transactionService = {
         subtotal: transactions.subtotal,
         discount: transactions.discount,
         shippingCost: transactions.shippingCost,
+        shippingCourier: transactions.shippingCourier,
+        shippingService: transactions.shippingService,
+        shippingDescription: transactions.shippingDescription,
+        shippingEtd: transactions.shippingEtd,
+        shippingWeight: transactions.shippingWeight,
+        shippingOrigin: transactions.shippingOrigin,
+        shippingDestination: transactions.shippingDestination,
         total: transactions.total,
         status: transactions.status,
         paymentMethod: transactions.paymentMethod,
@@ -202,8 +248,15 @@ export const transactionService = {
           invoiceNumber: input.invoiceNumber,
           customerId: input.customerId,
           subtotal: input.subtotal,
-          discount: input.discount,
+          discount: 0,
           shippingCost: input.shippingCost ?? 0,
+          shippingCourier: input.shippingCourier,
+          shippingService: input.shippingService,
+          shippingDescription: input.shippingDescription,
+          shippingEtd: input.shippingEtd,
+          shippingWeight: input.shippingWeight,
+          shippingOrigin: input.shippingOrigin,
+          shippingDestination: input.shippingDestination,
           total: input.total,
           status: 'Belum Dibayar',
           paymentMethod: input.paymentMethod ?? 'Mandiri',

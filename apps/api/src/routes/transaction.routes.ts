@@ -20,10 +20,14 @@ const createTransactionSchema = z.object({
       })
     )
     .min(1, 'At least one item is required'),
-  subtotal: z.number().int().min(0),
-  discount: z.number().int().min(0).default(0),
   shippingCost: z.number().int().min(0).default(0),
-  total: z.number().int().min(0),
+  shippingCourier: z.string().optional(),
+  shippingService: z.string().optional(),
+  shippingDescription: z.string().optional(),
+  shippingEtd: z.string().optional(),
+  shippingWeight: z.number().int().positive().optional(),
+  shippingOrigin: z.string().optional(),
+  shippingDestination: z.string().optional(),
   paymentMethod: z.enum(['Mandiri', 'BCA']).default('Mandiri'),
   mandiriAccountNumber: z.string().optional(),
   mandiriAccountHolder: z.string().optional(),
@@ -42,16 +46,21 @@ const updateStatusSchema = z.object({
   bcaAccountHolder: z.string().optional(),
 });
 
+const listTransactionQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(1000).default(50),
+  sort: z.enum(['newest', 'oldest', 'price-asc', 'price-desc']).default('newest'),
+  status: z.enum(['all', 'Lunas', 'Belum Dibayar']).default('all'),
+});
+
 /**
  * GET /api/transactions
  * List all transactions with optional search and pagination.
  */
 router.get('/', async (req, res) => {
-  const search = req.query.search as string | undefined;
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 50;
-
-  const result = await transactionService.getAll(search, page, limit);
+  const query = listTransactionQuerySchema.parse(req.query);
+  const result = await transactionService.getAll(query);
   res.json(result);
 });
 
@@ -83,12 +92,19 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   const parsed = createTransactionSchema.parse(req.body);
+  const subtotal = parsed.items.reduce(
+    (sum, item) => sum + (item.price * item.quantity),
+    0,
+  );
+  const total = subtotal + parsed.shippingCost;
 
   // Auto-generate invoice number
   const invoiceNumber = await transactionService.generateInvoiceNumber();
 
   const transaction = await transactionService.create({
     ...parsed,
+    subtotal,
+    total,
     invoiceNumber,
   });
 

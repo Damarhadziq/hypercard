@@ -1,14 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, Button, Input, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@pokemon-finance/ui';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDown, ArrowUp, ArrowUpDown, Calendar, ChevronDown, Download, FileText, Package, RotateCcw, Search, TrendingUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, BadgeDollarSign, Calendar, ChevronDown, CircleDollarSign, Crown, Download, FileText, Gauge, Info, Package, RotateCcw, Search, TrendingUp, WalletCards } from 'lucide-react';
 import { format } from 'date-fns';
-import { getTransactionCustomer, type Customer, type Product, type Transaction } from '../store/useStore';
-import { useCustomers, useDashboardReportItems, useProducts, useTransactions } from '../hooks/useApiQueries';
-import { filterTransactionsByPeriod, generateExcelReport, type ReportPeriod } from '../lib/generateReport';
+import { type Customer, type Product, type Transaction } from '../store/useStore';
+import { useCustomers, useDashboardReportItems, useDashboardReportSummary, useProducts, useTransactions } from '../hooks/useApiQueries';
+import useClampedPage from '../hooks/useClampedPage';
+import { generateExcelReport, type ReportPeriod } from '../lib/generateReport';
 import { useFeedback } from '../components/Feedback';
 import Pagination from '../components/Pagination';
+import {
+  calculateCostBreakdown,
+  formatPercentage,
+  formatRupiah,
+  generateSalesInsights,
+  type InsightStatus,
+  type SalesInsight,
+} from '../lib/reportInsights';
 
 const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -34,21 +42,6 @@ function getPeriodDisplayLabel(period: ReportPeriod): string {
   return 'Semua Periode';
 }
 
-function getAvailableYears(transactions: { date: string }[]): number[] {
-  const years = new Set(transactions.map((transaction) => new Date(transaction.date).getFullYear()));
-  years.add(new Date().getFullYear());
-  return Array.from(years).sort((a, b) => b - a);
-}
-
-function getPreviousPeriod(period: ReportPeriod): ReportPeriod {
-  if (period.mode === 'month' && period.month !== undefined && period.year !== undefined) {
-    if (period.month === 0) return { mode: 'month', month: 11, year: period.year - 1 };
-    return { mode: 'month', month: period.month - 1, year: period.year };
-  }
-  if (period.mode === 'year' && period.year !== undefined) return { mode: 'year', year: period.year - 1 };
-  return period;
-}
-
 function formatPercentDelta(current: number, previous: number) {
   if (previous === 0) return current > 0 ? '+100%' : '0%';
   const value = ((current - previous) / previous) * 100;
@@ -65,6 +58,14 @@ function formatProfitSignal(current: number, previous: number) {
 function formatNumberDelta(current: number, previous: number) {
   const value = current - previous;
   return `${value >= 0 ? '+' : ''}${value.toLocaleString('id-ID')}`;
+}
+
+function formatChartAxisValue(value: number) {
+  if (value === 0) return '0';
+  if (Math.abs(value) >= 1_000_000) {
+    return `${(value / 1_000_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })}jt`;
+  }
+  return `${(value / 1_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })}k`;
 }
 
 function PeriodOption({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -110,7 +111,7 @@ function PeriodSelector({
       {isOpen && (
         <>
           <button type="button" className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} aria-label="Tutup" />
-          <div className="animate-dropdown-in absolute right-0 top-[calc(100%+6px)] z-50 w-72 overflow-hidden rounded-xl border border-finance-200 bg-white p-2 shadow-xl">
+          <div className="animate-dropdown-in fixed inset-x-4 top-24 z-50 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-xl border border-finance-200 bg-white p-2 shadow-xl md:absolute md:inset-x-auto md:right-0 md:top-[calc(100%+6px)] md:w-72">
             <div className="mb-2 space-y-0.5">
               <p className="px-2 pb-1 pt-1 text-[11px] font-semibold text-finance-400">Cepat</p>
               <PeriodOption
@@ -205,6 +206,7 @@ function MetricCard({
   isPositive = true,
   active = false,
   onClick,
+  iconTone,
 }: {
   title: string;
   value: string;
@@ -213,21 +215,26 @@ function MetricCard({
   isPositive?: boolean;
   active?: boolean;
   onClick?: () => void;
+  iconTone: string;
 }) {
-  const trendTone = isPositive ? 'text-green-600' : 'text-red-500';
+  const trendTone = isPositive
+    ? 'border-green-500/25 bg-green-500/10 text-green-500'
+    : 'border-red-500/25 bg-red-500/10 text-red-500';
 
   const content = (
-    <Card className={`relative h-full overflow-hidden transition-all ${active ? 'border-accent/70 bg-accent/10 shadow-[inset_0_0_0_1px_rgba(214,180,93,0.22)]' : ''}`}>
-      <div className="pointer-events-none absolute right-4 top-4 text-accent opacity-[0.12] [&_svg]:h-20 [&_svg]:w-20">
-        {icon}
-      </div>
-      <CardContent className="relative z-10 flex h-full items-start justify-between p-5">
+    <Card className={`h-full overflow-hidden transition-all ${active ? 'border-accent/70 bg-accent/10 shadow-[inset_0_0_0_1px_rgba(214,180,93,0.22)]' : ''}`}>
+      <CardContent className="flex min-h-32 h-full flex-col justify-between gap-4 px-5 py-4">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <p className="truncate text-sm font-semibold text-finance-500">{title}</p>
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${iconTone}`}>
+            {icon}
+          </span>
+        </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-finance-500">{title}</p>
-          <div className="mt-3 flex items-baseline gap-2">
-            <p className="whitespace-nowrap text-2xl font-extrabold tracking-tight text-finance-950">{value}</p>
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <p className="whitespace-nowrap text-lg font-extrabold text-finance-950 2xl:text-2xl">{value}</p>
             {trend && (
-              <p className={`inline-flex shrink-0 items-center gap-1 text-xs font-bold ${trendTone}`}>
+              <p className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-extrabold 2xl:text-xs ${trendTone}`}>
                 {trend}
               </p>
             )}
@@ -245,15 +252,68 @@ function MetricCard({
   );
 }
 
-interface ReportRow {
+interface CustomerRanking {
   id: string;
-  transactionId: string;
-  date: string;
-  itemName: string;
-  quantity: number;
-  buyPrice: number;
-  sellPrice: number;
-  buyerName: string;
+  name: string;
+  spend: number;
+  orders: number;
+}
+
+function CustomerRankingCard({
+  title,
+  icon,
+  data,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  data: CustomerRanking[];
+}) {
+  const rankTone = [
+    'border-amber-300/40 bg-amber-400/10 text-amber-300',
+    'border-slate-300/30 bg-slate-300/10 text-slate-300',
+    'border-orange-400/30 bg-orange-500/10 text-orange-300',
+    'border-sky-400/25 bg-sky-500/10 text-sky-300',
+    'border-emerald-400/25 bg-emerald-500/10 text-emerald-300',
+  ];
+
+  return (
+    <Card className="h-full min-w-0">
+      <CardContent className="flex h-full flex-col p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="font-bold text-finance-950">{title}</h2>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-accent/30 bg-accent/10 text-accent shadow-[0_0_14px_rgba(214,180,93,0.12)]">
+            {icon}
+          </span>
+        </div>
+        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+          {Array.from({ length: 5 }, (_, index) => data[index]).map((customer, index) => (
+            customer ? (
+              <div key={customer.id} className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-finance-50">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-extrabold ${rankTone[index]}`}>
+                  {index === 0 ? <Crown size={15} /> : index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-finance-950">{customer.name}</p>
+                  <p className="mt-0.5 text-xs text-finance-500">{customer.orders} transaksi</p>
+                </div>
+                <p className="shrink-0 text-right text-xs font-bold text-finance-900">
+                  Rp {customer.spend.toLocaleString('id-ID')}
+                </p>
+              </div>
+            ) : (
+              <div key={`empty-${index}`} className="flex items-center gap-3 rounded-md px-2 py-2 opacity-60">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-extrabold ${rankTone[index]}`}>
+                  {index + 1}
+                </span>
+                <p className="flex-1 text-sm font-medium text-finance-500">Belum ada pelanggan</p>
+                <span className="text-xs font-bold text-finance-400">-</span>
+              </div>
+            )
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 type SortKey = 'date' | 'itemName' | 'quantity' | 'buyPrice' | 'sellPrice' | 'buyerName';
@@ -299,18 +359,159 @@ interface ChartPoint {
   profit: number;
 }
 
-function getChartTicks(data: ChartPoint[], maxTicks = 15): string[] {
-  if (data.length <= maxTicks) return data.map((point) => point.label);
+function getChartTicks(data: ChartPoint[], maxTicks = 8): number[] {
+  if (data.length <= maxTicks) return data.map((point) => point.date);
 
-  const lastIndex = data.length - 1;
-  const indexes = new Set<number>();
-  for (let index = 0; index < maxTicks; index += 1) {
-    indexes.add(Math.round((index * lastIndex) / (maxTicks - 1)));
+  const start = data[0]!.date;
+  const end = data[data.length - 1]!.date;
+  return Array.from(
+    { length: maxTicks },
+    (_, index) => start + ((end - start) * index) / (maxTicks - 1),
+  );
+}
+
+function formatChartDateTick(value: number, data: ChartPoint[]): string {
+  const date = new Date(value);
+  if (data.length > 12) return String(date.getDate());
+  if (data.length === 12 && data.every((point) => /^\d+$/.test(point.label))) {
+    return String(date.getMonth() + 1);
+  }
+  return format(date, 'MMM yyyy');
+}
+
+function buildContinuousChartData(
+  rows: { date: number; sold: number; profit: number }[],
+  period: ReportPeriod,
+): ChartPoint[] {
+  const grouped = new Map<number, Pick<ChartPoint, 'sold' | 'profit'>>();
+
+  for (const row of rows) {
+    const date = new Date(row.date);
+    const timestamp = period.mode === 'month'
+      ? new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+      : new Date(date.getFullYear(), date.getMonth(), 1).getTime();
+    const current = grouped.get(timestamp) ?? { sold: 0, profit: 0 };
+    current.sold += row.sold;
+    current.profit += row.profit;
+    grouped.set(timestamp, current);
   }
 
-  return Array.from(indexes)
-    .sort((left, right) => left - right)
-    .map((index) => data[index]!.label);
+  if (period.mode === 'month' && period.month !== undefined && period.year !== undefined) {
+    const daysInMonth = new Date(period.year, period.month + 1, 0).getDate();
+    const now = new Date();
+    const isCurrentMonth = period.month === now.getMonth() && period.year === now.getFullYear();
+    const visibleDays = isCurrentMonth ? Math.min(daysInMonth, now.getDate()) : daysInMonth;
+    return Array.from({ length: visibleDays }, (_, index) => {
+      const date = new Date(period.year!, period.month!, index + 1);
+      const timestamp = date.getTime();
+      const values = grouped.get(timestamp) ?? { sold: 0, profit: 0 };
+      return {
+        label: String(index + 1),
+        tooltipLabel: format(date, 'dd MMM yyyy'),
+        date: timestamp,
+        ...values,
+      };
+    });
+  }
+
+  if (period.mode === 'year' && period.year !== undefined) {
+    return Array.from({ length: 12 }, (_, month) => {
+      const date = new Date(period.year!, month, 1);
+      const timestamp = date.getTime();
+      const values = grouped.get(timestamp) ?? { sold: 0, profit: 0 };
+      return {
+        label: String(month + 1),
+        tooltipLabel: format(date, 'MMMM yyyy'),
+        date: timestamp,
+        ...values,
+      };
+    });
+  }
+
+  if (grouped.size === 0) return [];
+  const timestamps = Array.from(grouped.keys()).sort((left, right) => left - right);
+  const start = new Date(timestamps[0]!);
+  const end = new Date(timestamps[timestamps.length - 1]!);
+  const points: ChartPoint[] = [];
+
+  for (
+    let date = new Date(start.getFullYear(), start.getMonth(), 1);
+    date <= end;
+    date = new Date(date.getFullYear(), date.getMonth() + 1, 1)
+  ) {
+    const timestamp = date.getTime();
+    const values = grouped.get(timestamp) ?? { sold: 0, profit: 0 };
+    points.push({
+      label: format(date, 'MMM yyyy'),
+      tooltipLabel: format(date, 'MMMM yyyy'),
+      date: timestamp,
+      ...values,
+    });
+  }
+
+  return points;
+}
+
+const INSIGHT_ICON: Record<SalesInsight['key'], React.ReactNode> = {
+  empty: <Info size={17} />,
+  revenue: <TrendingUp size={17} />,
+  profit: <BadgeDollarSign size={17} />,
+  margin: <Gauge size={17} />,
+  cost: <CircleDollarSign size={17} />,
+};
+
+const INSIGHT_TONE: Record<InsightStatus, string> = {
+  Positif: 'border-emerald-400/25 bg-emerald-500/10 text-emerald-400',
+  'Perlu Dipantau': 'border-amber-400/25 bg-amber-500/10 text-amber-300',
+  Info: 'border-sky-400/25 bg-sky-500/10 text-sky-300',
+};
+
+function InsightCard({ insight }: { insight: SalesInsight }) {
+  const descriptionParts = insight.description.split(/((?:Rp\s*)?[\d.,]+%?)/g);
+
+  return (
+    <Card className="h-full">
+      <CardContent className="flex h-full flex-col gap-3 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-accent/25 bg-accent/10 text-accent">
+            {INSIGHT_ICON[insight.key]}
+          </span>
+          <span className={`rounded-full border px-2 py-1 text-[10px] font-bold ${INSIGHT_TONE[insight.status]}`}>
+            {insight.status}
+          </span>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-finance-950">{insight.title}</h3>
+          <p className="mt-1 text-xs leading-5 text-finance-500">
+            {descriptionParts.map((part, index) => (
+              /\d/.test(part)
+                ? <strong key={`${part}-${index}`} className="font-extrabold text-finance-900">{part}</strong>
+                : part
+            ))}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BreakdownCard({
+  label,
+  value,
+  tone = 'text-finance-950',
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+}) {
+  return (
+    <Card className="h-full">
+      <CardContent className="p-4">
+        <p className="text-xs font-semibold text-finance-500">{label}</p>
+        <p className={`mt-2 text-lg font-extrabold ${tone}`}>{value}</p>
+      </CardContent>
+    </Card>
+  );
 }
 
 function ReportChart({
@@ -328,11 +529,11 @@ function ReportChart({
   gradientId: string;
   color: string;
 }) {
-  const xAxisTicks = getChartTicks(data);
+  const xAxisTicks = getChartTicks(data, 8);
 
   return (
-    <Card>
-      <CardContent className="p-5">
+    <Card className="h-full">
+      <CardContent className="flex h-full flex-col p-5">
         <div className="mb-4">
           <h2 className="font-bold text-finance-950">{title}</h2>
           {subtitle && <p className="mt-1 text-xs text-finance-500">{subtitle}</p>}
@@ -343,8 +544,8 @@ function ReportChart({
             Tidak ada data untuk divisualisasikan.
           </div>
         ) : (
-          <div className="h-60 w-full">
-            <ResponsiveContainer width="100%" height="100%" debounce={180}>
+          <div className="min-w-0 flex-1">
+            <ResponsiveContainer width="100%" height={280} minWidth={0} debounce={180}>
               <AreaChart data={data} margin={{ top: 8, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -354,18 +555,22 @@ function ReportChart({
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(214,180,93,0.18)" />
                 <XAxis
-                  dataKey="label"
+                  dataKey="date"
+                  type="number"
+                  scale="time"
+                  domain={['dataMin', 'dataMax']}
                   ticks={xAxisTicks}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: '#8f9299' }}
+                  tickFormatter={(value: number) => formatChartDateTick(value, data)}
                 />
                 <YAxis
                   width={66}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: '#8f9299' }}
-                  tickFormatter={(value: number) => `Rp ${(value / 1000).toLocaleString('id-ID')}k`}
+                  tickFormatter={formatChartAxisValue}
                 />
                 <Tooltip
                   cursor={{ stroke: 'rgba(214,180,93,0.55)', strokeWidth: 1 }}
@@ -397,73 +602,36 @@ export default function Reports() {
   const transactions = transactionsQuery.data?.data ?? EMPTY_TRANSACTIONS;
   const products = productsQuery.data?.data ?? EMPTY_PRODUCTS;
   const customers = customersQuery.data?.data ?? EMPTY_CUSTOMERS;
-  const productMap = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
-  const navigate = useNavigate();
   const { notify } = useFeedback();
 
   const now = new Date();
   const [period, setPeriod] = useState<ReportPeriod>({ mode: 'month', month: now.getMonth(), year: now.getFullYear() });
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const reportSummaryQuery = useDashboardReportSummary({
+    mode: period.mode,
+    month: period.month,
+    year: period.year,
+  });
 
-  const availableYears = useMemo(() => getAvailableYears(transactions), [transactions]);
-  const periodTransactions = useMemo(
-    () => filterTransactionsByPeriod(transactions, period).filter((transaction) => transaction.status === 'Lunas'),
-    [transactions, period],
-  );
-  const previousTransactions = useMemo(
-    () => period.mode === 'all' ? [] : filterTransactionsByPeriod(transactions, getPreviousPeriod(period)).filter((transaction) => transaction.status === 'Lunas'),
-    [period, transactions],
-  );
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+      setPage(1);
+    }, 500);
 
-  const reportRows = useMemo<ReportRow[]>(() => {
-    const rows: ReportRow[] = [];
-    for (const transaction of periodTransactions) {
-      const customer = getTransactionCustomer(transaction, customers);
-      for (const item of transaction.items) {
-        const product = productMap.get(item.productId);
-        rows.push({
-          id: `${transaction.id}-${item.productId}-${rows.length}`,
-          transactionId: transaction.id,
-          date: transaction.date,
-          itemName: item.productName ?? product?.name ?? 'Produk',
-          quantity: item.quantity,
-          buyPrice: item.buyPrice ?? product?.buyPrice ?? 0,
-          sellPrice: item.price,
-          buyerName: customer.name || transaction.customerName || '-',
-        });
-      }
-    }
-    return rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [customers, periodTransactions, productMap]);
-
-  const filteredRows = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    const rows = reportRows.filter((row) => {
-      const searchMatch = !query
-        || row.itemName.toLowerCase().includes(query)
-        || row.buyerName.toLowerCase().includes(query);
-      return searchMatch;
-    });
-
-    return rows.sort((left, right) => {
-      const leftValue = sortKey === 'date' ? new Date(left.date).getTime() : left[sortKey];
-      const rightValue = sortKey === 'date' ? new Date(right.date).getTime() : right[sortKey];
-      const comparison = typeof leftValue === 'number' && typeof rightValue === 'number'
-        ? leftValue - rightValue
-        : String(leftValue).localeCompare(String(rightValue), 'id-ID');
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-  }, [reportRows, searchQuery, sortDirection, sortKey]);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
 
   const reportItemsQuery = useDashboardReportItems({
     mode: period.mode,
     month: period.month,
     year: period.year,
-    search: searchQuery.trim() || undefined,
+    search: debouncedSearchQuery || undefined,
     sortKey,
     sortDirection,
     page,
@@ -473,75 +641,45 @@ export default function Reports() {
   const paginatedTotalItems = reportItemsQuery.data?.pagination.total ?? 0;
   const paginatedTotalPages = Math.max(1, Math.ceil(paginatedTotalItems / pageSize));
 
-  useEffect(() => {
-    if (page > paginatedTotalPages) setPage(paginatedTotalPages);
-  }, [page, paginatedTotalPages]);
+  useClampedPage(page, paginatedTotalPages, setPage, !reportItemsQuery.isFetching);
 
   const handlePeriodChange = (nextPeriod: ReportPeriod) => {
     setPeriod(nextPeriod);
     setPage(1);
   };
 
-  const uniqueCustomers = new Set(periodTransactions.map((transaction) => transaction.customerId));
-  const totalSold = filteredRows.reduce((total, row) => total + (row.sellPrice * row.quantity), 0);
-  const totalItems = filteredRows.reduce((total, row) => total + row.quantity, 0);
-  const totalProfit = filteredRows.reduce((total, row) => total + ((row.sellPrice - row.buyPrice) * row.quantity), 0);
-  const previousRows = useMemo<ReportRow[]>(() => {
-    const rows: ReportRow[] = [];
-    for (const transaction of previousTransactions) {
-      const customer = getTransactionCustomer(transaction, customers);
-      for (const item of transaction.items) {
-        const product = productMap.get(item.productId);
-        rows.push({
-          id: `${transaction.id}-${item.productId}-${rows.length}`,
-          transactionId: transaction.id,
-          date: transaction.date,
-          itemName: item.productName ?? product?.name ?? 'Produk',
-          quantity: item.quantity,
-          buyPrice: item.buyPrice ?? product?.buyPrice ?? 0,
-          sellPrice: item.price,
-          buyerName: customer.name || transaction.customerName || '-',
-        });
-      }
-    }
-    return rows;
-  }, [customers, previousTransactions, productMap]);
-  const previousSold = previousRows.reduce((total, row) => total + (row.sellPrice * row.quantity), 0);
-  const previousItems = previousRows.reduce((total, row) => total + row.quantity, 0);
-  const previousProfit = previousRows.reduce((total, row) => total + ((row.sellPrice - row.buyPrice) * row.quantity), 0);
-  const previousCustomers = new Set(previousTransactions.map((transaction) => transaction.customerId)).size;
-
-  const chartData = useMemo(() => {
-    const grouped = new Map<string, ChartPoint>();
-    for (const row of filteredRows) {
-      const date = new Date(row.date);
-      const key = period.mode === 'month'
-        ? `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
-        : `${date.getFullYear()}-${date.getMonth()}`;
-      const existing = grouped.get(key);
-      const sold = row.sellPrice * row.quantity;
-      const profit = (row.sellPrice - row.buyPrice) * row.quantity;
-      if (existing) {
-        existing.sold += sold;
-        existing.profit += profit;
-      } else {
-        grouped.set(key, {
-          label: period.mode === 'month'
-            ? format(date, 'dd')
-            : format(date, 'MMM yyyy'),
-          tooltipLabel: period.mode === 'month'
-            ? format(date, 'dd MMM yyyy')
-            : format(date, 'MMMM yyyy'),
-          date: period.mode === 'month'
-            ? new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
-            : new Date(date.getFullYear(), date.getMonth(), 1).getTime(),
-          sold,
-          profit,
-        });
-      }
-    }
-    return Array.from(grouped.values()).sort((left, right) => left.date - right.date);
-  }, [filteredRows, period.mode]);
+  const availableYears = reportSummaryQuery.data?.availableYears ?? [now.getFullYear()];
+  const currentSummary = reportSummaryQuery.data?.current;
+  const previousSummary = reportSummaryQuery.data?.previous;
+  const totalSold = currentSummary?.totalSold ?? 0;
+  const totalItems = currentSummary?.totalItems ?? 0;
+  const totalProfit = currentSummary?.totalProfit ?? 0;
+  const customerCount = currentSummary?.customerCount ?? 0;
+  const previousSold = previousSummary?.totalSold ?? 0;
+  const previousItems = previousSummary?.totalItems ?? 0;
+  const previousProfit = previousSummary?.totalProfit ?? 0;
+  const previousCustomers = previousSummary?.customerCount ?? 0;
+  const costBreakdown = currentSummary?.costBreakdown ?? calculateCostBreakdown([]);
+  const previousCostBreakdown = previousSummary?.costBreakdown ?? calculateCostBreakdown([]);
+  const topBySpend = reportSummaryQuery.data?.topSpend ?? [];
+  const chartData = useMemo(
+    () => buildContinuousChartData(reportSummaryQuery.data?.chart ?? [], period),
+    [period, reportSummaryQuery.data?.chart],
+  );
+  const salesInsights = useMemo(
+    () => generateSalesInsights(
+      costBreakdown,
+      previousCostBreakdown,
+      reportSummaryQuery.data?.hasCurrentData ?? false,
+      reportSummaryQuery.data?.hasPreviousData ?? false,
+    ),
+    [
+      costBreakdown,
+      previousCostBreakdown,
+      reportSummaryQuery.data?.hasCurrentData,
+      reportSummaryQuery.data?.hasPreviousData,
+    ],
+  );
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -555,6 +693,7 @@ export default function Reports() {
 
   const resetFilters = () => {
     setSearchQuery('');
+    setDebouncedSearchQuery('');
     setSortKey('date');
     setSortDirection('desc');
     setPage(1);
@@ -571,7 +710,7 @@ export default function Reports() {
     }
   };
 
-  const isLoading = transactionsQuery.isLoading || productsQuery.isLoading || customersQuery.isLoading;
+  const isLoading = transactionsQuery.isLoading || productsQuery.isLoading || customersQuery.isLoading || reportSummaryQuery.isLoading;
   const isTableLoading = isLoading || reportItemsQuery.isLoading;
 
   return (
@@ -591,30 +730,67 @@ export default function Reports() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Total Omzet" value={`Rp ${totalSold.toLocaleString('id-ID')}`} trend={period.mode === 'all' ? undefined : formatPercentDelta(totalSold, previousSold)} isPositive={totalSold >= previousSold} icon={<TrendingUp size={20} />} />
-        <MetricCard title="Item Terjual" value={totalItems.toLocaleString('id-ID')} trend={period.mode === 'all' ? undefined : formatNumberDelta(totalItems, previousItems)} isPositive={totalItems >= previousItems} icon={<Package size={20} />} />
-        <MetricCard title="Jumlah Pelanggan" value={uniqueCustomers.size.toLocaleString('id-ID')} trend={period.mode === 'all' ? undefined : formatNumberDelta(uniqueCustomers.size, previousCustomers)} isPositive={uniqueCustomers.size >= previousCustomers} icon={<FileText size={20} />} />
-        <MetricCard title="Total Untung" value={`Rp ${totalProfit.toLocaleString('id-ID')}`} trend={period.mode === 'all' ? undefined : formatProfitSignal(totalProfit, previousProfit)} isPositive={totalProfit >= 0} icon={<TrendingUp size={20} />} />
+        <MetricCard title="Total Omzet" value={`Rp ${totalSold.toLocaleString('id-ID')}`} trend={period.mode === 'all' ? undefined : formatPercentDelta(totalSold, previousSold)} isPositive={totalSold >= previousSold} icon={<TrendingUp size={18} />} iconTone="border-rose-400/35 bg-rose-500/10 text-rose-400 shadow-[0_0_14px_rgba(251,113,133,0.16)]" />
+        <MetricCard title="Item Terjual" value={totalItems.toLocaleString('id-ID')} trend={period.mode === 'all' ? undefined : formatNumberDelta(totalItems, previousItems)} isPositive={totalItems >= previousItems} icon={<Package size={18} />} iconTone="border-sky-400/35 bg-sky-500/10 text-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.16)]" />
+        <MetricCard title="Jumlah Pelanggan" value={customerCount.toLocaleString('id-ID')} trend={period.mode === 'all' ? undefined : formatNumberDelta(customerCount, previousCustomers)} isPositive={customerCount >= previousCustomers} icon={<FileText size={18} />} iconTone="border-amber-400/35 bg-amber-500/10 text-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.16)]" />
+        <MetricCard title="Total Untung" value={`Rp ${totalProfit.toLocaleString('id-ID')}`} trend={period.mode === 'all' ? undefined : formatProfitSignal(totalProfit, previousProfit)} isPositive={totalProfit >= 0} icon={<WalletCards size={18} />} iconTone="border-emerald-400/35 bg-emerald-500/10 text-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.16)]" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <ReportChart
-          title="Tren Omzet"
-          subtitle=""
-          data={chartData}
-          dataKey="sold"
-          gradientId="reportSoldFill"
-          color="#ef4444"
-        />
-        <ReportChart
-          title="Tren Keuntungan"
-          subtitle=""
-          data={chartData}
-          dataKey="profit"
-          gradientId="reportProfitFill"
-          color="#d6b45d"
-        />
+      <div className="grid grid-cols-1 gap-4 xl:h-[390px] xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <div className="min-h-[320px] xl:min-h-0">
+          <ReportChart
+            title="Tren Keuntungan"
+            subtitle=""
+            data={chartData}
+            dataKey="profit"
+            gradientId="reportProfitFill"
+            color="#d6b45d"
+          />
+        </div>
+        <div className="min-h-[360px] xl:min-h-0">
+          <CustomerRankingCard title="Top Spend Pelanggan" icon={<Crown size={17} />} data={topBySpend} />
+        </div>
       </div>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-bold text-finance-950">Insight Penjualan</h2>
+          <p className="mt-1 text-sm text-finance-500">Ringkasan kondisi penjualan periode aktif.</p>
+        </div>
+        <div className={`grid gap-3 ${salesInsights.length === 1 ? 'grid-cols-1' : 'sm:grid-cols-2 xl:grid-cols-4'}`}>
+          {salesInsights.map((insight) => <InsightCard key={insight.key} insight={insight} />)}
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-bold text-finance-950">Breakdown Biaya</h2>
+          <p className="mt-1 text-sm text-finance-500">Estimasi profit setelah modal dan ongkir.</p>
+        </div>
+        {!reportSummaryQuery.data?.hasCurrentData ? (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-finance-500">
+              Belum ada biaya yang bisa dihitung untuk periode ini.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <BreakdownCard label="Modal Barang" value={formatRupiah(costBreakdown.capitalCost)} />
+            <BreakdownCard label="Ongkir Seller" value={formatRupiah(costBreakdown.sellerShippingCost)} />
+            <BreakdownCard label="Total Biaya" value={formatRupiah(costBreakdown.totalCost)} />
+            <BreakdownCard
+              label="Profit Bersih"
+              value={formatRupiah(costBreakdown.netProfit)}
+              tone={costBreakdown.netProfit >= 0 ? 'text-emerald-400' : 'text-red-500'}
+            />
+            <BreakdownCard
+              label="Margin Bersih"
+              value={formatPercentage(costBreakdown.netMargin)}
+              tone={costBreakdown.netMargin >= 15 ? 'text-emerald-400' : 'text-amber-300'}
+            />
+          </div>
+        )}
+      </section>
 
       <Card>
         <CardContent className="space-y-4 p-5">
@@ -625,10 +801,7 @@ export default function Reports() {
                 placeholder="Cari item atau buyer..."
                 className="h-10 pl-10"
                 value={searchQuery}
-                onChange={(event) => {
-                  setSearchQuery(event.target.value);
-                  setPage(1);
-                }}
+                onChange={(event) => setSearchQuery(event.target.value)}
               />
             </div>
             {hasActiveFilters && (
@@ -647,11 +820,9 @@ export default function Reports() {
             ) : (
               <div className="divide-y divide-finance-100">
                 {paginatedRows.map((row) => (
-                  <button
+                  <div
                     key={row.id}
-                    type="button"
-                    onClick={() => navigate(`/transactions/${row.transactionId}`)}
-                    className="w-full py-4 text-left"
+                    className="w-full rounded-md py-4 text-left transition-colors hover:bg-finance-50"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -673,7 +844,7 @@ export default function Reports() {
                         <p className="mt-1 font-semibold text-finance-900">Rp {row.sellPrice.toLocaleString('id-ID')}</p>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -710,7 +881,7 @@ export default function Reports() {
                   </TableRow>
                 ) : (
                   paginatedRows.map((row) => (
-                    <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/transactions/${row.transactionId}`)}>
+                    <TableRow key={row.id}>
                       <TableCell className="whitespace-nowrap">{format(new Date(row.date), 'dd MMM yyyy')}</TableCell>
                       <TableCell>
                         <p className="truncate font-semibold text-finance-950" title={row.itemName}>{row.itemName}</p>

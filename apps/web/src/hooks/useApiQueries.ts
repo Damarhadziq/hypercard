@@ -5,6 +5,7 @@ import { customersService } from '../services/customers';
 import { dashboardService } from '../services/dashboard';
 import { productsService } from '../services/products';
 import { transactionsService } from '../services/transactions';
+import type { TransactionListParams } from '../services/transactions';
 import type { AdminInput, CustomerInput, CustomerUpdateInput, ProductInput, ProductUpdateInput, UpdateTransactionStatusInput } from '../services/types';
 
 export const queryKeys = {
@@ -21,6 +22,7 @@ export const queryKeys = {
   dashboardChart: (days: number) => ['dashboard', 'chart', days] as const,
   dashboardRecent: (limit: number) => ['dashboard', 'recent', limit] as const,
   dashboardReportItems: (params?: unknown) => ['dashboard', 'report-items', params ?? {}] as const,
+  dashboardReportSummary: (params?: unknown) => ['dashboard', 'report-summary', params ?? {}] as const,
 };
 
 function useInvalidateAppData() {
@@ -44,10 +46,8 @@ export function useAuthSession() {
 }
 
 export function useSignIn() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) => authService.signIn(email, password),
-    onSuccess: (session) => queryClient.setQueryData(queryKeys.authSession, session),
   });
 }
 
@@ -98,6 +98,7 @@ export function useCustomers(params: { search?: string; page?: number; limit?: n
   return useQuery({
     queryKey: queryKeys.customers(params),
     queryFn: () => customersService.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -118,7 +119,7 @@ export function useCustomerMutations() {
   };
 }
 
-export function useTransactions(params: { search?: string; page?: number; limit?: number } = { limit: 1000 }) {
+export function useTransactions(params: TransactionListParams = { limit: 1000 }) {
   return useQuery({
     queryKey: queryKeys.transactions(params),
     queryFn: () => transactionsService.list(params),
@@ -154,6 +155,7 @@ export function useAdmins(params: { search?: string; page?: number; limit?: numb
   return useQuery({
     queryKey: queryKeys.admins(params),
     queryFn: () => adminsService.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -194,6 +196,19 @@ export function useDashboardReportItems(params: {
   return useQuery({
     queryKey: queryKeys.dashboardReportItems(params),
     queryFn: () => dashboardService.reportItems(params),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useDashboardReportSummary(params: {
+  mode?: 'all' | 'month' | 'year';
+  month?: number;
+  year?: number;
+}) {
+  return useQuery({
+    queryKey: queryKeys.dashboardReportSummary(params),
+    queryFn: () => dashboardService.reportSummary(params),
+    placeholderData: keepPreviousData,
   });
 }
 

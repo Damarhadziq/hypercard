@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { createPortal } from 'react-dom';
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 import { Button } from '@pokemon-finance/ui';
+import useAppScrollLock from '../hooks/useAppScrollLock';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -33,6 +34,7 @@ const FeedbackContext = createContext<FeedbackContextValue | null>(null);
 export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [confirmation, setConfirmation] = useState<(ConfirmOptions & { resolve: (value: boolean) => void }) | null>(null);
+  useAppScrollLock(Boolean(confirmation));
 
   const dismissToast = useCallback((id: number) => {
     setToasts((current) => current.map((toast) => (

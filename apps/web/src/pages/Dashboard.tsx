@@ -43,12 +43,11 @@ function getAvailableYears(transactions: { date: string }[]): number[] {
 }
 
 function formatAxisRupiah(value: number) {
-  if (value === 0) return 'Rp 0';
-  const millions = value / 1_000_000;
-  const formatted = Number.isInteger(millions)
-    ? millions.toLocaleString('id-ID')
-    : millions.toLocaleString('id-ID', { maximumFractionDigits: 1 });
-  return `Rp ${formatted} jt`;
+  if (value === 0) return '0';
+  if (Math.abs(value) >= 1_000_000) {
+    return `${(value / 1_000_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })}jt`;
+  }
+  return `${(value / 1_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })}k`;
 }
 
 function getPreviousPeriod(period: ReportPeriod): ReportPeriod {
@@ -115,7 +114,7 @@ function PeriodSelector({
             onClick={() => setIsOpen(false)}
             aria-label="Tutup"
           />
-          <div className="animate-dropdown-in absolute right-0 top-[calc(100%+6px)] z-50 w-72 overflow-hidden rounded-xl border border-finance-200 bg-white p-2 shadow-xl">
+          <div className="animate-dropdown-in fixed inset-x-4 top-24 z-50 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-xl border border-finance-200 bg-white p-2 shadow-xl md:absolute md:inset-x-auto md:right-0 md:top-[calc(100%+6px)] md:w-72">
             {/* Quick presets */}
             <div className="mb-2 space-y-0.5">
               <p className="px-2 pb-1 pt-1 text-[11px] font-semibold text-finance-400">Cepat</p>
@@ -252,8 +251,10 @@ function DownloadButton({
     <div className="relative">
       <Button
         variant="outline"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
         onClick={() => setIsOpen((v) => !v)}
-        className="flex items-center gap-2 px-3 text-sm"
+        className="dropdown-trigger flex items-center gap-2 px-3 text-sm"
       >
         <Download size={16} />
         <span className="hidden sm:inline">Download Laporan</span>
@@ -268,7 +269,7 @@ function DownloadButton({
             onClick={() => setIsOpen(false)}
             aria-label="Tutup"
           />
-          <div className="animate-dropdown-in absolute right-0 top-[calc(100%+6px)] z-50 w-64 overflow-hidden rounded-xl border border-finance-200 bg-white shadow-xl">
+          <div className="animate-dropdown-in fixed inset-x-4 top-24 z-50 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-xl border border-finance-200 bg-white shadow-xl md:absolute md:inset-x-auto md:right-0 md:top-[calc(100%+6px)] md:w-64">
             <div className="p-2">
               <p className="px-2 py-1 text-[11px] font-semibold text-finance-400">Download Excel</p>
 
@@ -425,46 +426,43 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Period Badge */}
-      <div className="flex items-center gap-2">
-        <span className="surface-pill inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold">
-          <Calendar size={13} />
-          {getPeriodDisplayLabel(period)}
-        </span>
-        {filteredTransactions.length === 0 && (
-          <span className="text-xs text-finance-400">— Belum ada transaksi di periode ini</span>
-        )}
-      </div>
+      {filteredTransactions.length === 0 && (
+        <p className="text-xs text-finance-400">Belum ada transaksi di periode ini</p>
+      )}
 
       {/* Metric Cards */}
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4 pt-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           title="Total Omzet"
           value={`Rp ${stats.omzet.toLocaleString('id-ID')}`}
           trend={period.mode === 'all' ? `${stats.transactionCount} transaksi` : formatPercentDelta(stats.omzet, previousStats.omzet)}
           isPositive={stats.omzet >= previousStats.omzet}
-          icon={<TrendingUp className="text-finance-500" size={20} />}
+          icon={<TrendingUp size={18} />}
+          iconTone="border-rose-400/35 bg-rose-500/10 text-rose-400 shadow-[0_0_14px_rgba(251,113,133,0.16)]"
         />
         <MetricCard
           title="Total Untung"
           value={`Rp ${stats.totalProfit.toLocaleString('id-ID')}`}
           trend={period.mode === 'all' ? `${stats.completedCount} transaksi lunas` : formatProfitSignal(stats.totalProfit, previousStats.totalProfit)}
           isPositive={stats.totalProfit >= 0}
-          icon={<CreditCard className="text-finance-500" size={20} />}
+          icon={<CreditCard size={18} />}
+          iconTone="border-emerald-400/35 bg-emerald-500/10 text-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.16)]"
         />
         <MetricCard
           title="Produk Terjual"
           value={stats.productsSold.toString()}
           trend={period.mode === 'all' ? 'unit terjual' : formatNumberDelta(stats.productsSold, previousStats.productsSold)}
           isPositive={stats.productsSold >= previousStats.productsSold}
-          icon={<Package className="text-finance-500" size={20} />}
+          icon={<Package size={18} />}
+          iconTone="border-sky-400/35 bg-sky-500/10 text-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.16)]"
         />
         <MetricCard
           title="Jumlah Pelanggan"
           value={customerCount.toLocaleString('id-ID')}
           trend={period.mode === 'all' ? 'pelanggan aktif' : formatNumberDelta(customerCount, previousCustomerCount)}
           isPositive={customerCount >= previousCustomerCount}
-          icon={<FileClock className="text-accent" size={20} />}
+          icon={<FileClock size={18} />}
+          iconTone="border-amber-400/35 bg-amber-500/10 text-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.16)]"
         />
       </div>
 
@@ -484,7 +482,7 @@ export default function Dashboard() {
                   Belum ada data transaksi di periode ini.
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={280} debounce={180}>
+                <ResponsiveContainer width="100%" height={280} minWidth={0} debounce={180}>
                   <AreaChart data={chartData} margin={{ top: 10, right: 12, left: 12, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
@@ -580,22 +578,38 @@ export default function Dashboard() {
   );
 }
 
-function MetricCard({ title, value, trend, isPositive, isNeutral, icon }: { title: string, value: string, trend: string, isPositive?: boolean, isNeutral?: boolean, icon: ReactNode }) {
+function MetricCard({
+  title,
+  value,
+  trend,
+  isPositive,
+  isNeutral,
+  icon,
+  iconTone,
+}: {
+  title: string;
+  value: string;
+  trend: string;
+  isPositive?: boolean;
+  isNeutral?: boolean;
+  icon: ReactNode;
+  iconTone: string;
+}) {
   const trendTone = isNeutral ? 'text-finance-500' : isPositive ? 'text-green-600' : 'text-red-600';
 
   return (
-    <Card className="animate-soft-in relative min-w-0 overflow-hidden">
-      <div className="pointer-events-none absolute right-4 top-4 text-accent opacity-[0.12] [&_svg]:h-20 [&_svg]:w-20">
-        {icon}
-      </div>
-      <CardContent className="relative z-10 flex h-full min-h-32 flex-col justify-between gap-4 px-6 py-4">
+    <Card className="animate-soft-in min-w-0 overflow-hidden">
+      <CardContent className="flex h-full min-h-32 flex-col justify-between gap-4 px-5 py-4">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <p className="truncate text-sm font-medium text-finance-500">{title}</p>
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${iconTone}`}>
+            {icon}
+          </span>
         </div>
         <div className="min-w-0">
-          <div className="flex min-w-0 items-baseline gap-2">
-            <h4 className="min-w-0 whitespace-nowrap text-xl font-bold text-finance-950 2xl:text-2xl">{value}</h4>
-            <span className={`inline-flex shrink-0 items-center gap-1 text-xs font-bold ${trendTone}`}>
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <h4 className="min-w-0 whitespace-nowrap text-lg font-bold text-finance-950 xl:text-xl 2xl:text-2xl">{value}</h4>
+            <span className={`inline-flex shrink-0 items-center gap-1 text-[11px] font-bold 2xl:text-xs ${trendTone}`}>
               {trend}
             </span>
           </div>

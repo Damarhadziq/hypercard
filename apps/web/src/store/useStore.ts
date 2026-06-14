@@ -59,6 +59,13 @@ export interface Transaction {
   subtotal: number;
   discount: number;
   shippingCost: number;
+  shippingCourier?: string;
+  shippingService?: string;
+  shippingDescription?: string;
+  shippingEtd?: string;
+  shippingWeight?: number;
+  shippingOrigin?: string;
+  shippingDestination?: string;
   total: number;
   status: 'Lunas' | 'Belum Dibayar' | 'Dibatalkan';
   paymentMethod?: PaymentMethod;
@@ -98,30 +105,10 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  password: string;
   role: UserRole;
   status: 'active' | 'inactive';
   lastLogin?: string;
 }
-
-const defaultAdmins: AdminUser[] = [
-  {
-    id: 'superadmin-1',
-    name: 'Owner',
-    email: 'superadmin@hypercard.local',
-    password: 'Superadmin123',
-    role: 'superadmin',
-    status: 'active',
-  },
-  {
-    id: 'admin-1',
-    name: 'Admin Store',
-    email: 'admin@hypercard.local',
-    password: 'Admin123',
-    role: 'admin',
-    status: 'active',
-  },
-];
 
 const defaultProducts: Product[] = [
   {
@@ -336,13 +323,6 @@ function applyProductDefaults(product: Product): Product {
 }
 
 interface AppState {
-  admins: AdminUser[];
-  addAdmin: (admin: Omit<AdminUser, 'id' | 'lastLogin'>) => void;
-  deleteAdmin: (id: string) => void;
-  updateAdminPassword: (id: string, password: string) => void;
-  toggleAdminStatus: (id: string) => void;
-  touchAdminLogin: (id: string) => void;
-
   products: Product[];
   addProduct: (product: Product) => void;
   updateProduct: (id: string, product: Partial<Product>) => void;
@@ -365,32 +345,6 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set) => ({
-      admins: defaultAdmins,
-      addAdmin: (admin) => set((state) => ({
-        admins: [
-          ...state.admins,
-          {
-            ...admin,
-            id: `admin-${Date.now()}`,
-          },
-        ],
-      })),
-      deleteAdmin: (id) => set((state) => ({
-        admins: state.admins.filter((admin) => admin.id !== id || admin.role === 'superadmin'),
-      })),
-      updateAdminPassword: (id, password) => set((state) => ({
-        admins: state.admins.map((admin) => admin.id === id ? { ...admin, password } : admin),
-      })),
-      toggleAdminStatus: (id) => set((state) => ({
-        admins: state.admins.map((admin) => {
-          if (admin.id !== id || admin.role === 'superadmin') return admin;
-          return { ...admin, status: admin.status === 'active' ? 'inactive' : 'active' };
-        }),
-      })),
-      touchAdminLogin: (id) => set((state) => ({
-        admins: state.admins.map((admin) => admin.id === id ? { ...admin, lastLogin: new Date().toISOString() } : admin),
-      })),
-
       products: defaultProducts,
       addProduct: (product) => set((state) => ({ products: [...state.products, applyProductDefaults(product)] })),
       updateProduct: (id, updatedFields) => set((state) => ({
@@ -469,9 +423,10 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'hypercard-storage',
-      version: 8,
+      version: 9,
       migrate: (persistedState) => {
-        const state = persistedState as AppState;
+        const state = persistedState as AppState & { admins?: unknown };
+        delete state.admins;
         const mergeDefaults = <T extends { id: string }>(current: T[] | undefined, defaults: T[]) => {
           const existing = current ?? [];
           const existingIds = new Set(existing.map((item) => item.id));
@@ -481,7 +436,6 @@ export const useStore = create<AppState>()(
 
         return {
           ...state,
-          admins: state.admins?.length ? state.admins : defaultAdmins,
           products: migratedProducts,
           customers: mergeDefaults(state.customers, defaultCustomers),
           sellerInfo: {

@@ -6,10 +6,13 @@ import { useStore } from '../store/useStore';
 import type { InvoiceItem, PaymentMethod, Product } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
 import CleanSelect from '../components/CleanSelect';
+import ShippingForm from '../components/ShippingForm';
 import { useFeedback } from '../components/Feedback';
 import { downloadInvoicePdf } from '../lib/invoicePdf';
+import { calculateInvoiceSubtotal, calculateInvoiceTotal } from '../lib/invoiceUtils';
 import { getRarityCode } from '../lib/rarity';
 import { useCustomers, useProducts, useTransactionMutations, useTransactions } from '../hooks/useApiQueries';
+import { emptyInvoiceShipping } from '../services/shipping';
 
 const cardGradientByName: Record<string, string> = {
   pikachu: 'from-yellow-200 via-amber-300 to-orange-400',
@@ -20,14 +23,6 @@ function getCardGradient(name: string) {
   const normalizedName = name.toLowerCase();
   const key = Object.keys(cardGradientByName).find((item) => normalizedName.includes(item));
   return key ? cardGradientByName[key] : 'from-sky-200 via-indigo-300 to-slate-800';
-}
-
-function formatNumberInput(value: number) {
-  return value > 0 ? value.toLocaleString('id-ID') : '';
-}
-
-function parseNumberInput(value: string) {
-  return Number(value.replace(/\D/g, '')) || 0;
 }
 
 function ProductThumb({ product }: { product: Product }) {
@@ -256,7 +251,7 @@ export default function Invoices() {
 
   const [customerId, setCustomerId] = useState('');
   const [items, setItems] = useState<InvoiceItem[]>([]);
-  const [discount, setDiscount] = useState(0);
+  const [shipping, setShipping] = useState(() => emptyInvoiceShipping());
   const [paymentStatus, setPaymentStatus] = useState<'Lunas' | 'Belum Dibayar'>('Belum Dibayar');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Mandiri');
   const [bcaAccountNumber, setBcaAccountNumber] = useState(sellerInfo.bcaAccountNumber);
@@ -280,6 +275,11 @@ export default function Invoices() {
     if (recentDelta !== 0) return recentDelta;
     return customers.indexOf(b) - customers.indexOf(a);
   });
+
+  const handleCustomerChange = (nextCustomerId: string) => {
+    setCustomerId(nextCustomerId);
+    setShipping(emptyInvoiceShipping());
+  };
 
   const handleAddItem = (productId: string) => {
     const product = products.find((item) => item.id === productId);
@@ -321,7 +321,7 @@ export default function Invoices() {
   const resetInvoiceForm = (nextBcaAccountNumber = sellerInfo.bcaAccountNumber) => {
     setCustomerId('');
     setItems([]);
-    setDiscount(0);
+    setShipping(emptyInvoiceShipping());
     setPaymentStatus('Belum Dibayar');
     setPaymentMethod('Mandiri');
     setBcaAccountNumber(nextBcaAccountNumber);
@@ -329,8 +329,8 @@ export default function Invoices() {
     setIsItemListExpanded(false);
   };
 
-  const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const total = subtotal - discount;
+  const subtotal = calculateInvoiceSubtotal(items);
+  const total = calculateInvoiceTotal(subtotal, shipping.shippingCost);
 
   const handleSaveInvoice = async (printAfterSave = false) => {
     if (isSavingInvoice) return;
@@ -358,8 +358,14 @@ export default function Invoices() {
           price: item.price,
         })),
         subtotal,
-        discount,
-        shippingCost: 0,
+        shippingCost: shipping.shippingCost,
+        shippingCourier: shipping.courier || undefined,
+        shippingService: shipping.service || undefined,
+        shippingDescription: shipping.description,
+        shippingEtd: shipping.etd,
+        shippingWeight: shipping.weight || undefined,
+        shippingOrigin: shipping.origin || undefined,
+        shippingDestination: shipping.destination || undefined,
         total,
         paymentMethod,
         mandiriAccountNumber: sellerInfo.bankAccountNumber,
@@ -440,7 +446,7 @@ export default function Invoices() {
                 <label className="text-sm font-medium">Pilih Pembeli</label>
                 <CleanSelect
                   value={customerId}
-                  onChange={setCustomerId}
+                  onChange={handleCustomerChange}
                   placeholder="Pilih Pembeli"
                   searchable
                   searchPlaceholder="Cari nama atau nomor handphone..."
@@ -556,18 +562,23 @@ export default function Invoices() {
                 <span className="text-finance-500">Subtotal</span>
                 <span className="font-medium">Rp {subtotal.toLocaleString('id-ID')}</span>
               </div>
-              <div className="flex items-center justify-between gap-4 text-sm">
-                <span className="text-finance-500">Diskon</span>
-                <div className="w-36">
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    value={formatNumberInput(discount)}
-                    onChange={(event) => setDiscount(parseNumberInput(event.target.value))}
-                    placeholder="0"
-                    className="h-9 text-right"
-                  />
-                </div>
+              <div className="border-t border-finance-100 pt-4">
+                <ShippingForm
+                  key={customerId || 'empty-customer'}
+                  value={shipping}
+                  onChange={setShipping}
+                />
+                {shipping.service && (
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-finance-200 bg-finance-50 px-3 py-2 text-xs">
+                    <span className="min-w-0 truncate text-finance-500">
+                      {shipping.courier} {shipping.service}
+                      {shipping.etd ? ` · ${shipping.etd} hari` : ''}
+                    </span>
+                    <span className="shrink-0 font-bold text-finance-900">
+                      Rp {shipping.shippingCost.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="border-t border-finance-100 pt-4">
                 <div className="mb-2.5 flex items-center justify-between gap-3">

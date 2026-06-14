@@ -209,9 +209,6 @@ export async function downloadInvoicePdf({
       const summaryRows: Array<{ label: string; value: string; strong?: boolean }> = [
         { label: 'SUBTOTAL', value: rupiah(transaction.subtotal) },
       ];
-      if (transaction.discount > 0) {
-        summaryRows.push({ label: 'DISKON', value: `- ${rupiah(transaction.discount)}` });
-      }
       summaryRows.push(
         { label: 'ONGKIR', value: rupiah(transaction.shippingCost ?? 0) },
         { label: 'STATUS PEMBAYARAN', value: transaction.status },

@@ -23,7 +23,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           "ui-button inline-flex cursor-pointer select-none items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-[#070708] transition-all duration-150 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
           {
-            "border border-accent/70 bg-accent text-[#080808] hover:bg-[#e6c979] active:bg-[#c8a54a]": variant === "default",
+            "border border-accent/45 bg-[linear-gradient(135deg,rgba(214,180,93,0.28),rgba(220,38,38,0.10)_48%,rgba(20,20,23,0.90))] text-accent shadow-[0_10px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.08)] hover:border-accent/65 hover:bg-[linear-gradient(135deg,rgba(214,180,93,0.36),rgba(220,38,38,0.13)_48%,rgba(20,20,23,0.94))] hover:text-[#f0d27b] active:border-accent/70 active:bg-finance-100 disabled:border-finance-200 disabled:bg-finance-50 disabled:bg-none disabled:text-finance-500 disabled:shadow-none disabled:hover:border-finance-200 disabled:hover:bg-finance-50 disabled:hover:text-finance-500": variant === "default",
             "bg-primary text-white hover:bg-primary-hover active:bg-[#b91c1c]": variant === "destructive",
             "border border-finance-200 bg-finance-50 text-finance-900 hover:border-accent/50 hover:bg-finance-100 active:border-accent/60 active:bg-finance-200": variant === "outline",
             "bg-finance-100 text-finance-900 hover:bg-finance-200 active:bg-finance-300": variant === "secondary",

@@ -1,5 +1,5 @@
 import { apiClient, type PaginatedResponse } from './apiClient';
-import type { DashboardChartPoint, DashboardReportRow, DashboardStats, Transaction } from './types';
+import type { DashboardChartPoint, DashboardReportRow, DashboardReportSummary, DashboardStats, Transaction } from './types';
 
 export const dashboardService = {
   stats() {
@@ -22,5 +22,12 @@ export const dashboardService = {
     limit?: number;
   }) {
     return apiClient<PaginatedResponse<DashboardReportRow>>('/dashboard/report-items', { query: params });
+  },
+  reportSummary(params: {
+    mode?: 'all' | 'month' | 'year';
+    month?: number;
+    year?: number;
+  }) {
+    return apiClient<DashboardReportSummary>('/dashboard/report-summary', { query: params });
   },
 };

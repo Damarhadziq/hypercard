@@ -11,8 +11,11 @@ import CleanSelect from '../components/CleanSelect';
 import CurrencyInput from '../components/CurrencyInput';
 import PokemonCardPicker from '../components/PokemonCardPicker';
 import { useCustomers, useProductMutations, useTransactionMutations, useTransactions } from '../hooks/useApiQueries';
+import useClampedPage from '../hooks/useClampedPage';
+import useDebouncedValue from '../hooks/useDebouncedValue';
 import { rarityOptions } from '../lib/rarity';
 import type { PokemonTcgCard } from '../lib/pokemonTcg';
+import type { TransactionSort, TransactionStatusFilter } from '../services/transactions';
 import type { UpdateTransactionStatusInput } from '../services/types';
 import { useStore, type PaymentMethod, type Transaction } from '../store/useStore';
 
@@ -50,6 +53,18 @@ type ManualTransactionForm = typeof emptyManualTransaction;
 const conditionOptions = [
   'Mint', 'Near Mint', 'Excellent', 'Good', 'Played', 'Damaged',
 ];
+const EMPTY_TRANSACTIONS: Transaction[] = [];
+const transactionSortOptions: Array<{ value: TransactionSort; label: string }> = [
+  { value: 'newest', label: 'Terbaru' },
+  { value: 'oldest', label: 'Terlama' },
+  { value: 'price-asc', label: 'Harga terendah' },
+  { value: 'price-desc', label: 'Harga tertinggi' },
+];
+const transactionStatusOptions: Array<{ value: TransactionStatusFilter; label: string }> = [
+  { value: 'all', label: 'Semua status' },
+  { value: 'Lunas', label: 'Lunas' },
+  { value: 'Belum Dibayar', label: 'Belum Dibayar' },
+];
 
 function ManualTransactionDrawer({
   form,
@@ -58,6 +73,7 @@ function ManualTransactionDrawer({
   onChange,
   onClose,
   onSubmit,
+  onBeforeClose,
 }: {
   form: ManualTransactionForm;
   customers: Array<{ id: string; name: string }>;
@@ -65,6 +81,7 @@ function ManualTransactionDrawer({
   onChange: (updater: (current: ManualTransactionForm) => ManualTransactionForm) => void;
   onClose: () => void;
   onSubmit: () => void;
+  onBeforeClose: () => boolean | Promise<boolean>;
 }) {
   const customerOptions = [
     { value: '', label: 'Pilih pembeli', disabled: true },
@@ -82,10 +99,10 @@ function ManualTransactionDrawer({
   };
 
   return (
-    <SideDrawer onClose={onClose} widthClassName="md:max-w-3xl">
+    <SideDrawer onClose={onClose} onBeforeClose={onBeforeClose} widthClassName="md:max-w-3xl">
       {(requestClose) => (
         <div className="flex min-h-full flex-col">
-          <div className="sticky top-0 z-10 border-b border-finance-200 bg-finance-50/95 px-6 py-5 backdrop-blur">
+          <div className="side-drawer-header sticky top-0 z-10 bg-finance-50/95 px-6 py-5 backdrop-blur">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold text-finance-950">Tambah Transaksi</h2>
@@ -254,15 +271,20 @@ function ManualTransactionDrawer({
 
 export default function Transactions() {
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebouncedValue(searchQuery.trim());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [sort, setSort] = useState<TransactionSort>('newest');
+  const [statusFilter, setStatusFilter] = useState<TransactionStatusFilter>('all');
   const customersQuery = useCustomers({ limit: 1000 });
   const transactionsQuery = useTransactions({
-    search: searchQuery.trim() || undefined,
+    search: debouncedSearchQuery || undefined,
     page,
     limit: pageSize,
+    sort,
+    status: statusFilter,
   });
-  const transactions = transactionsQuery.data?.data ?? [];
+  const transactions = transactionsQuery.data?.data ?? EMPTY_TRANSACTIONS;
   const totalItems = transactionsQuery.data?.pagination.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const { updateTransactionStatus } = useTransactionMutations();
@@ -277,12 +299,10 @@ export default function Transactions() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('Mandiri');
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [manualForm, setManualForm] = useState(emptyManualTransaction);
-  const { notify } = useFeedback();
+  const { notify, confirm } = useFeedback();
   const customers = customersQuery.data?.data ?? [];
 
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  useClampedPage(page, totalPages, setPage, !transactionsQuery.isFetching);
 
   useEffect(() => {
     const ids = transactions
@@ -291,10 +311,12 @@ export default function Transactions() {
 
     if (ids.length === 0) return;
 
-    setHighlightedTransactionIds((current) => {
-      const next = new Set(current);
-      ids.forEach((id) => next.add(id));
-      return next;
+    const frame = window.requestAnimationFrame(() => {
+      setHighlightedTransactionIds((current) => {
+        const next = new Set(current);
+        ids.forEach((id) => next.add(id));
+        return next;
+      });
     });
 
     const timer = window.setTimeout(() => {
@@ -305,7 +327,10 @@ export default function Transactions() {
       });
     }, 6500);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
   }, [newTransactionId, transactions]);
 
   const toggleStatus = async (id: string, currentStatus: string) => {
@@ -338,6 +363,35 @@ export default function Transactions() {
       ...emptyManualTransaction,
       customerId: customers[0]?.id ?? '',
     });
+  };
+
+  const isManualFormDirty = Boolean(
+    manualForm.cardName.trim()
+      || manualForm.setName.trim()
+      || manualForm.cardNumber.trim()
+      || manualForm.image
+      || manualForm.rarity
+      || manualForm.buyPrice
+      || manualForm.sellPrice
+      || manualForm.quantity !== 1
+      || manualForm.condition !== 'Near Mint'
+      || manualForm.status !== 'Belum Dibayar'
+      || manualForm.paymentMethod !== 'Mandiri',
+  );
+  const canCloseManualTransaction = async () => {
+    if (!isManualFormDirty) return true;
+    return confirm({
+      title: 'Batalkan tambah transaksi?',
+      highlightLabel: 'Draft transaksi',
+      highlight: manualForm.cardName.trim() || 'Transaksi baru',
+      message: 'Data transaksi yang sudah diisi belum disimpan dan akan hilang.',
+      confirmText: 'Tetap Batalkan',
+      danger: true,
+    });
+  };
+  const closeManualTransaction = () => {
+    setIsManualModalOpen(false);
+    resetManualForm();
   };
 
   const openManualTransactionModal = () => {
@@ -386,7 +440,6 @@ export default function Transactions() {
         customerId: manualForm.customerId,
         items: [{ productId: product.id, quantity, price: sellPrice }],
         subtotal: sellPrice * quantity,
-        discount: 0,
         shippingCost: 0,
         total: sellPrice * quantity,
         paymentMethod: manualForm.paymentMethod,
@@ -439,7 +492,8 @@ export default function Transactions() {
           customers={customers}
           isSubmitting={createProduct.isPending || createTransaction.isPending || updateTransactionStatus.isPending}
           onChange={setManualForm}
-          onClose={() => setIsManualModalOpen(false)}
+          onClose={closeManualTransaction}
+          onBeforeClose={canCloseManualTransaction}
           onSubmit={handleCreateManualTransaction}
         />
       )}
@@ -457,8 +511,8 @@ export default function Transactions() {
 
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center space-x-2">
-            <div className="relative w-full sm:max-w-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full lg:max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-finance-400" />
               <Input 
                 placeholder="Cari no invoice atau nama pembeli..." 
@@ -468,6 +522,26 @@ export default function Transactions() {
                   setSearchQuery(e.target.value);
                   setPage(1);
                 }}
+              />
+            </div>
+            <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:min-w-[420px]">
+              <CleanSelect
+                value={sort}
+                onChange={(value) => {
+                  setSort(value as TransactionSort);
+                  setPage(1);
+                }}
+                options={transactionSortOptions}
+                placeholder="Urutkan"
+              />
+              <CleanSelect
+                value={statusFilter}
+                onChange={(value) => {
+                  setStatusFilter(value as TransactionStatusFilter);
+                  setPage(1);
+                }}
+                options={transactionStatusOptions}
+                placeholder="Status pembayaran"
               />
             </div>
           </div>

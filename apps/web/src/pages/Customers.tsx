@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@pokemon-finance/ui';
 import { PlusCircle, Search, Edit2, Trash2, MapPin, Phone, X } from 'lucide-react';
 import type { Customer } from '../store/useStore';
@@ -6,13 +6,18 @@ import SideDrawer from '../components/SideDrawer';
 import { useFeedback } from '../components/Feedback';
 import Pagination from '../components/Pagination';
 import { useCustomerMutations, useCustomers } from '../hooks/useApiQueries';
+import useClampedPage from '../hooks/useClampedPage';
+import useDebouncedValue from '../hooks/useDebouncedValue';
+import AddressPicker, { type AddressPickerValue } from '../components/AddressPicker';
+import { joinAddress, splitStoredAddress } from '../lib/indonesiaLocations';
 
 export default function Customers() {
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebouncedValue(searchQuery.trim());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const customersQuery = useCustomers({
-    search: searchQuery.trim() || undefined,
+    search: debouncedSearchQuery || undefined,
     page,
     limit: pageSize,
   });
@@ -27,27 +32,62 @@ export default function Customers() {
   const [customerForm, setCustomerForm] = useState<Partial<Customer>>({
     name: '', phone: '', address: '', postalCode: '', notes: '', history: ''
   });
+  const [addressPicker, setAddressPicker] = useState<AddressPickerValue>({
+    province: '', city: '', district: '',
+  });
 
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  useClampedPage(page, totalPages, setPage, !customersQuery.isFetching);
 
   const resetForm = () => {
     setIsFormOpen(false);
     setEditingCustomer(null);
     setCustomerForm({ name: '', phone: '', address: '', postalCode: '', notes: '', history: '' });
+    setAddressPicker({ province: '', city: '', district: '' });
   };
 
   const openAddForm = () => {
     setEditingCustomer(null);
     setCustomerForm({ name: '', phone: '', address: '', postalCode: '', notes: '', history: '' });
+    setAddressPicker({ province: '', city: '', district: '' });
     setIsFormOpen(true);
   };
 
   const openEditForm = (customer: Customer) => {
+    const storedAddress = splitStoredAddress(customer.address);
     setEditingCustomer(customer);
-    setCustomerForm({ ...customer });
+    setCustomerForm({ ...customer, address: storedAddress.detail });
+    setAddressPicker({
+      province: storedAddress.province,
+      city: storedAddress.city,
+      district: storedAddress.district,
+    });
     setIsFormOpen(true);
+  };
+
+  const editingAddressBaseline = splitStoredAddress(editingCustomer?.address ?? '');
+  const customerBaseline: Partial<Customer> = editingCustomer ? {
+    ...editingCustomer,
+    address: editingAddressBaseline.detail,
+  } : {
+    name: '', phone: '', address: '', postalCode: '', notes: '', history: '',
+  };
+  const hasChangedCustomerField = ['name', 'phone', 'address', 'postalCode', 'notes', 'history'].some(
+    (key) => (customerForm[key as keyof Customer] ?? '') !== (customerBaseline[key as keyof Customer] ?? ''),
+  );
+  const isCustomerFormDirty = hasChangedCustomerField
+    || addressPicker.province !== editingAddressBaseline.province
+    || addressPicker.city !== editingAddressBaseline.city
+    || addressPicker.district !== editingAddressBaseline.district;
+  const canCloseCustomerForm = async () => {
+    if (!isCustomerFormDirty) return true;
+    return confirm({
+      title: editingCustomer ? 'Batalkan edit pembeli?' : 'Batalkan tambah pembeli?',
+      highlightLabel: editingCustomer ? 'Pembeli' : 'Draft pembeli',
+      highlight: customerForm.name?.trim() || editingCustomer?.name || 'Pembeli baru',
+      message: 'Data yang sudah diisi belum disimpan dan akan hilang.',
+      confirmText: 'Tetap Batalkan',
+      danger: true,
+    });
   };
 
   const handleSave = async () => {
@@ -56,15 +96,20 @@ export default function Customers() {
       return;
     }
 
+    const payload = {
+      ...customerForm,
+      address: joinAddress({ detail: customerForm.address, ...addressPicker }),
+    };
+
     try {
       if (editingCustomer) {
-        await updateCustomer.mutateAsync({ id: editingCustomer.id, input: customerForm });
+        await updateCustomer.mutateAsync({ id: editingCustomer.id, input: payload });
         notify('success', 'Pembeli diperbarui', `${customerForm.name} berhasil diperbarui.`);
         resetForm();
         return;
       }
 
-      await createCustomer.mutateAsync(customerForm as Omit<Customer, 'id'>);
+      await createCustomer.mutateAsync(payload as Omit<Customer, 'id'>);
       notify('success', 'Pembeli ditambahkan', `${customerForm.name} berhasil disimpan.`);
       resetForm();
     } catch (error) {
@@ -202,10 +247,10 @@ export default function Customers() {
       </Card>
 
       {isFormOpen && (
-        <SideDrawer onClose={resetForm} widthClassName="md:max-w-2xl">
+        <SideDrawer onClose={resetForm} onBeforeClose={canCloseCustomerForm} widthClassName="md:max-w-2xl">
           {(requestClose) => (
           <>
-            <div className="sticky top-0 z-10 flex h-16 items-center justify-between bg-finance-50 px-5 md:px-8">
+            <div className="side-drawer-header sticky top-0 z-10 flex items-start justify-between gap-4 bg-finance-50 px-6 py-5 md:px-8">
               <div>
                 <h2 className="text-lg font-bold text-finance-950">
                   {editingCustomer ? 'Edit Pembeli' : 'Tambah Pembeli Baru'}
@@ -240,9 +285,10 @@ export default function Customers() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Alamat Lengkap <span className="text-primary">*</span></label>
-                    <Input value={customerForm.address || ''} onChange={e => setCustomerForm({...customerForm, address: e.target.value})} placeholder="Nama jalan, RT/RW, Kota" />
+                    <label className="text-sm font-medium">Detail Alamat <span className="text-primary">*</span></label>
+                    <Input value={customerForm.address || ''} onChange={e => setCustomerForm({...customerForm, address: e.target.value})} placeholder="Nama jalan, nomor rumah, RT/RW" />
                   </div>
+                  <AddressPicker value={addressPicker} onChange={setAddressPicker} />
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Riwayat Pembelian / Catatan</label>
                     <Input value={customerForm.history || ''} onChange={e => setCustomerForm({...customerForm, history: e.target.value})} placeholder="Pernah beli Pikachu Promo..." />

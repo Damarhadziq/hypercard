@@ -1,9 +1,20 @@
 import { apiClient, type PaginatedResponse } from './apiClient';
 import type { CreateTransactionInput, Transaction } from './types';
 
+export type TransactionSort = 'newest' | 'oldest' | 'price-asc' | 'price-desc';
+export type TransactionStatusFilter = 'all' | Transaction['status'];
+
+export interface TransactionListParams {
+  search?: string;
+  page?: number;
+  limit?: number;
+  sort?: TransactionSort;
+  status?: TransactionStatusFilter;
+}
+
 export const transactionsService = {
-  list(params: { search?: string; page?: number; limit?: number } = {}) {
-    return apiClient<PaginatedResponse<Transaction>>('/transactions', { query: params });
+  list(params: TransactionListParams = {}) {
+    return apiClient<PaginatedResponse<Transaction>>('/transactions', { query: { ...params } });
   },
   detail(id: string) {
     return apiClient<Transaction>(`/transactions/${id}`);

@@ -27,9 +27,10 @@ interface CleanSelectProps {
   placeholder?: string;
   searchable?: boolean;
   searchPlaceholder?: string;
+  disabled?: boolean;
 }
 
-export default function CleanSelect({ value, onChange, options, placeholder = 'Pilih opsi', searchable = false, searchPlaceholder = 'Cari...' }: CleanSelectProps) {
+export default function CleanSelect({ value, onChange, options, placeholder = 'Pilih opsi', searchable = false, searchPlaceholder = 'Cari...', disabled = false }: CleanSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -120,6 +121,7 @@ export default function CleanSelect({ value, onChange, options, placeholder = 'P
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}
+        disabled={disabled}
         onClick={() => {
           setIsOpen((current) => {
             const nextOpen = !current;
@@ -128,7 +130,7 @@ export default function CleanSelect({ value, onChange, options, placeholder = 'P
           });
           setQuery('');
         }}
-        className="select-trigger flex h-11 w-full select-none items-center justify-between gap-3 rounded-md border border-finance-200 bg-white px-3 py-2 text-left text-sm shadow-none transition-colors duration-200 hover:border-finance-300 focus:outline-none"
+        className="select-trigger flex h-11 w-full select-none items-center justify-between gap-3 rounded-md border border-finance-200 bg-white px-3 py-2 text-left text-sm shadow-none transition-colors duration-200 hover:border-finance-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span className={`min-w-0 truncate ${selectedOption ? 'text-finance-950' : 'text-finance-400'}`}>
           {selectedOption?.label || placeholder}

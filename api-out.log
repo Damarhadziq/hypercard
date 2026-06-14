@@ -1,0 +1,83 @@
+
+> api@0.0.0 dev
+> tsx watch src/index.ts
+
+
+🚀 Hypercard API running at http://localhost:3001
+   Health: http://localhost:3001/api/health
+   Auth:   http://localhost:3001/api/auth
+   CORS:   http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+
+23.23.56 [tsx] change in ./src\env.ts Rerunning...
+c23.23.56 [tsx] change in ./src\routes\transaction.routes.ts Restarting...
+c23.23.56 [tsx] change in ./src\services\shipping.service.ts Restarting...
+c
+🚀 Hypercard API running at http://localhost:3001
+   Health: http://localhost:3001/api/health
+   Auth:   http://localhost:3001/api/auth
+   CORS:   http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+
+23.52.28 [tsx] change in ./src\services\shipping.service.ts Restarting...
+c23.52.28 [tsx] change in ./src\routes\shipping.routes.ts Restarting...
+c
+🚀 Hypercard API running at http://localhost:3001
+   Health: http://localhost:3001/api/health
+   Auth:   http://localhost:3001/api/auth
+   CORS:   http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+
+00.26.24 [tsx] change in ./src\env.ts Restarting...
+c00.26.24 [tsx] change in ./src\db\schema.ts Restarting...
+c00.26.25 [tsx] unlink in ./src\services\shipping.service.ts Restarting...
+c00.26.25 [tsx] change in ./src\services\shipping.service.ts Restarting...
+c00.26.26 [tsx] unlink in ./src\routes\shipping.routes.ts Restarting...
+c00.26.27 [tsx] change in ./src\routes\shipping.routes.ts Restarting...
+c00.26.27 [tsx] change in ./src\routes\transaction.routes.ts Restarting...
+c00.26.27 [tsx] change in ./src\services\transaction.service.ts Restarting...
+c
+🚀 Hypercard API running at http://localhost:3001
+   Health: http://localhost:3001/api/health
+   Auth:   http://localhost:3001/api/auth
+   CORS:   http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+
+22.17.29 [tsx] change in ./src\lib\auth.ts Restarting...
+c22.17.29 [tsx] change in ./src\index.ts Restarting...
+c22.17.30 [tsx] change in ./src\env.ts Restarting...
+c22.17.30 [tsx] change in ./src\routes\admin.routes.ts Restarting...
+c22.17.30 [tsx] change in ./src\middleware\error.middleware.ts Restarting...
+c22.17.31 [tsx] unlink in ./src\routes\shipping.routes.ts Restarting...
+c22.17.31 [tsx] unlink in ./src\services\shipping.service.ts Restarting...
+c
+🚀 Hypercard API running at http://localhost:3001
+   Health: http://localhost:3001/api/health
+   Auth:   http://localhost:3001/api/auth
+   CORS:   http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+
+22.19.37 [tsx] change in ./src\env.ts Restarting...
+c
+🚀 Hypercard API running at http://localhost:3001
+   Health: http://localhost:3001/api/health
+   Auth:   http://localhost:3001/api/auth
+   CORS:   http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+
+22.28.44 [tsx] change in ./src\middleware\security.middleware.ts Restarting...
+c
+🚀 Hypercard API running at http://localhost:3001
+   Health: http://localhost:3001/api/health
+   Auth:   http://localhost:3001/api/auth
+   CORS:   http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+
+23.07.23 [tsx] change in ./src\routes\admin.routes.ts Restarting...
+c
+🚀 Hypercard API running at http://localhost:3001
+   Health: http://localhost:3001/api/health
+   Auth:   http://localhost:3001/api/auth
+   CORS:   http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+
+10.52.29 [tsx] change in ./src\services\dashboard.service.ts Restarting...
+c10.52.29 [tsx] change in ./src\routes\dashboard.routes.ts Restarting...
+c
+🚀 Hypercard API running at http://localhost:3001
+   Health: http://localhost:3001/api/health
+   Auth:   http://localhost:3001/api/auth
+   CORS:   http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174
+

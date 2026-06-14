@@ -1,7 +1,10 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, CreditCard, X } from 'lucide-react';
 import { Button } from '@pokemon-finance/ui';
 import type { PaymentMethod, SellerInfo } from '../store/useStore';
 import type { UpdateTransactionStatusInput } from '../services/types';
+import useAppScrollLock from '../hooks/useAppScrollLock';
 
 export default function PaymentStatusModal({
   open,
@@ -20,7 +23,20 @@ export default function PaymentStatusModal({
   onConfirm: (input: UpdateTransactionStatusInput) => void;
   isSubmitting?: boolean;
 }) {
-  if (!open) return null;
+  useAppScrollLock(open);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isSubmitting) onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSubmitting, onClose, open]);
 
   const buildPaymentInput = (paymentMethod: PaymentMethod): UpdateTransactionStatusInput => ({
     status: 'Lunas',
@@ -31,12 +47,26 @@ export default function PaymentStatusModal({
     bcaAccountHolder: sellerInfo.bcaAccountHolder,
   });
 
-  return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-      <div className="animate-soft-in w-full max-w-md rounded-xl border border-finance-200 bg-finance-50 p-5 shadow-2xl">
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      className="premium-dark animate-fade-in fixed inset-0 z-[1500] flex items-center justify-center overflow-hidden bg-black/70 p-4 backdrop-blur-sm"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isSubmitting) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payment-status-title"
+        className="animate-soft-in flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-xl border border-finance-200 bg-finance-50 shadow-2xl"
+      >
+        <div className="min-h-0 overflow-y-auto p-5">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-finance-950">Tandai transaksi lunas?</h2>
+          <div className="min-w-0">
+            <h2 id="payment-status-title" className="text-lg font-bold text-finance-950">Tandai transaksi lunas?</h2>
             <p className="mt-1 text-sm text-finance-500">
               Pilih metode pembayaran yang dipakai agar data laporan dan invoice tetap rapi.
             </p>
@@ -71,19 +101,26 @@ export default function PaymentStatusModal({
           })}
         </div>
 
-        <div className="mt-5 grid gap-2 sm:grid-cols-[1fr_auto]">
+        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Button
             variant="outline"
             onClick={() => onConfirm({ status: 'Lunas' })}
             disabled={isSubmitting}
+            className="h-auto min-h-10 whitespace-normal px-3 py-2 text-center leading-5"
           >
-            Tandai Lunas Tanpa Metode
+            Tandai tanpa metode
           </Button>
-          <Button onClick={() => onConfirm(buildPaymentInput(selectedMethod))} disabled={isSubmitting} className="sm:min-w-52">
+          <Button
+            onClick={() => onConfirm(buildPaymentInput(selectedMethod))}
+            disabled={isSubmitting}
+            className="h-auto min-h-10 whitespace-normal px-3 py-2 text-center leading-5"
+          >
             Simpan Status Lunas
           </Button>
         </div>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

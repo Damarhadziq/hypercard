@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import useAppScrollLock from '../hooks/useAppScrollLock';
 
 interface SideDrawerProps {
   children: ReactNode | ((requestClose: () => void) => ReactNode);
@@ -11,6 +12,7 @@ interface SideDrawerProps {
 
 export default function SideDrawer({ children, onClose, onBeforeClose, widthClassName = 'md:max-w-3xl' }: SideDrawerProps) {
   const [isClosing, setIsClosing] = useState(false);
+  useAppScrollLock(true);
 
   const requestClose = useCallback(async () => {
     if (isClosing) return;

@@ -335,7 +335,7 @@ export default function Products() {
         <SideDrawer onClose={() => setSelectedProduct(null)}>
           {(requestClose) => (
           <>
-            <div className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-finance-100 bg-finance-50 px-5 md:px-8">
+            <div className="side-drawer-header sticky top-0 z-30 flex items-start justify-between gap-4 bg-finance-50 px-6 py-5 md:px-8">
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-bold text-finance-950">{selectedProduct.name}</h2>
                 <p className="mt-0.5 truncate text-sm text-finance-500">{selectedProduct.setName || selectedProduct.category}</p>
@@ -437,7 +437,7 @@ export default function Products() {
         <SideDrawer onClose={finalizeAddDrawerClose} onBeforeClose={canCloseAddDrawer}>
           {(requestClose) => (
           <>
-            <div className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-finance-100 bg-finance-50 px-5 md:px-8">
+            <div className="side-drawer-header sticky top-0 z-30 flex items-start justify-between gap-4 bg-finance-50 px-6 py-5 md:px-8">
               <div>
                 <h2 className="text-lg font-bold text-finance-950">{editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</h2>
                 <p className="mt-0.5 text-sm text-finance-500">{editingProduct ? 'Perbarui data dan spesifikasi kartu.' : 'Lengkapi data dan spesifikasi kartu.'}</p>

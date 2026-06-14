@@ -6,6 +6,7 @@ import { env } from './env.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { db } from './db/index.js';
 import { sql } from 'drizzle-orm';
+import { rateLimit, securityHeaders } from './middleware/security.middleware.js';
 
 // Routes
 import authRoutes from './routes/auth.routes.js';
@@ -45,8 +46,11 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+app.use(securityHeaders);
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: false, limit: '2mb' }));
 
 // Ensure uploads directory exists
 const uploadsDir = path.resolve('uploads');
@@ -86,13 +90,13 @@ app.get('/api/health/db', async (_req, res) => {
 // ──────────────────────────────────────────────────────────
 
 // Better Auth — must be mounted before other routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 60 }), authRoutes);
 
 // Application routes
 app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/transactions', transactionRoutes);
-app.use('/api/admins', adminRoutes);
+app.use('/api/admins', rateLimit({ windowMs: 15 * 60 * 1000, max: 120 }), adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // ──────────────────────────────────────────────────────────

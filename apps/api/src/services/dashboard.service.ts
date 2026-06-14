@@ -204,4 +204,191 @@ export const dashboardService = {
       },
     };
   },
+
+  async getReportSummary(params: {
+    mode?: 'all' | 'month' | 'year';
+    month?: number;
+    year?: number;
+  }) {
+    const mode = params.mode ?? 'all';
+    const now = new Date();
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const getPeriodBounds = (previous = false) => {
+      if (mode === 'month' && params.month !== undefined && params.year !== undefined) {
+        const targetMonth = previous ? params.month - 1 : params.month;
+        return {
+          start: new Date(params.year, targetMonth, 1),
+          end: new Date(params.year, targetMonth + 1, 1),
+        };
+      }
+      if (mode === 'year' && params.year !== undefined) {
+        const targetYear = previous ? params.year - 1 : params.year;
+        return {
+          start: new Date(targetYear, 0, 1),
+          end: new Date(targetYear + 1, 0, 1),
+        };
+      }
+      return null;
+    };
+
+    const getConditions = (previous = false) => {
+      const conditions: SQL[] = [
+        eq(transactions.status, 'Lunas'),
+        lte(transactions.date, todayEnd),
+      ];
+      const bounds = getPeriodBounds(previous);
+      if (bounds) {
+        conditions.push(gte(transactions.date, bounds.start));
+        conditions.push(lt(transactions.date, bounds.end));
+      }
+      return and(...conditions);
+    };
+
+    const loadPeriod = async (previous = false) => {
+      if (previous && mode === 'all') {
+        return {
+          itemRows: [] as {
+            date: Date;
+            quantity: number;
+            sellPrice: number;
+            buyPrice: number | null;
+          }[],
+          transactionRows: [] as {
+            customerId: string;
+            customerName: string | null;
+            total: number;
+            shippingCost: number;
+          }[],
+        };
+      }
+
+      const conditions = getConditions(previous);
+      const [itemRows, transactionRows] = await Promise.all([
+        db
+          .select({
+            date: transactions.date,
+            quantity: transactionItems.quantity,
+            sellPrice: transactionItems.price,
+            buyPrice: products.buyPrice,
+          })
+          .from(transactionItems)
+          .innerJoin(transactions, eq(transactionItems.transactionId, transactions.id))
+          .leftJoin(products, eq(transactionItems.productId, products.id))
+          .where(conditions),
+        db
+          .select({
+            customerId: transactions.customerId,
+            customerName: customers.name,
+            total: transactions.total,
+            shippingCost: transactions.shippingCost,
+          })
+          .from(transactions)
+          .leftJoin(customers, eq(transactions.customerId, customers.id))
+          .where(conditions),
+      ]);
+
+      return { itemRows, transactionRows };
+    };
+
+    const [current, previous, yearRows] = await Promise.all([
+      loadPeriod(),
+      loadPeriod(true),
+      db
+        .select({
+          year: sql<number>`extract(year from ${transactions.date})::int`,
+        })
+        .from(transactions)
+        .groupBy(sql`extract(year from ${transactions.date})`)
+        .orderBy(desc(sql`extract(year from ${transactions.date})`)),
+    ]);
+
+    const summarize = (periodData: Awaited<ReturnType<typeof loadPeriod>>) => {
+      const totalSold = periodData.itemRows.reduce(
+        (total, row) => total + row.sellPrice * row.quantity,
+        0,
+      );
+      const totalItems = periodData.itemRows.reduce(
+        (total, row) => total + row.quantity,
+        0,
+      );
+      const capitalCost = periodData.itemRows.reduce(
+        (total, row) => total + (row.buyPrice ?? 0) * row.quantity,
+        0,
+      );
+      const sellerShippingCost = periodData.transactionRows.reduce(
+        (total, row) => total + row.shippingCost,
+        0,
+      );
+      const totalProfit = totalSold - capitalCost;
+      const totalCost = capitalCost + sellerShippingCost;
+      const netProfit = totalSold - totalCost;
+
+      return {
+        totalSold,
+        totalItems,
+        totalProfit,
+        customerCount: new Set(periodData.transactionRows.map((row) => row.customerId)).size,
+        costBreakdown: {
+          revenue: totalSold,
+          capitalCost,
+          sellerShippingCost,
+          totalCost,
+          netProfit,
+          netMargin: totalSold > 0 ? (netProfit / totalSold) * 100 : 0,
+        },
+      };
+    };
+
+    const chartGroups = new Map<number, { sold: number; profit: number }>();
+    for (const row of current.itemRows) {
+      const date = new Date(row.date);
+      const bucket = mode === 'month'
+        ? new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+        : new Date(date.getFullYear(), date.getMonth(), 1).getTime();
+      const currentBucket = chartGroups.get(bucket) ?? { sold: 0, profit: 0 };
+      currentBucket.sold += row.sellPrice * row.quantity;
+      currentBucket.profit += (row.sellPrice - (row.buyPrice ?? 0)) * row.quantity;
+      chartGroups.set(bucket, currentBucket);
+    }
+
+    const customerGroups = new Map<string, {
+      id: string;
+      name: string;
+      spend: number;
+      orders: number;
+    }>();
+    for (const row of current.transactionRows) {
+      const customer = customerGroups.get(row.customerId) ?? {
+        id: row.customerId,
+        name: row.customerName ?? 'Pembeli',
+        spend: 0,
+        orders: 0,
+      };
+      customer.spend += row.total;
+      customer.orders += 1;
+      customerGroups.set(row.customerId, customer);
+    }
+
+    const currentSummary = summarize(current);
+    const previousSummary = summarize(previous);
+
+    return {
+      current: currentSummary,
+      previous: previousSummary,
+      hasCurrentData: current.transactionRows.length > 0,
+      hasPreviousData: previous.transactionRows.length > 0,
+      chart: Array.from(chartGroups.entries())
+        .sort(([left], [right]) => left - right)
+        .map(([date, values]) => ({ date, ...values })),
+      topSpend: Array.from(customerGroups.values())
+        .sort((left, right) => right.spend - left.spend || right.orders - left.orders)
+        .slice(0, 5),
+      availableYears: Array.from(new Set([
+        now.getFullYear(),
+        ...yearRows.map((row) => row.year),
+      ])).sort((left, right) => right - left),
+    };
+  },
 };

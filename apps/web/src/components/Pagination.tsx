@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const pageSizeOptions = [5, 10, 20, 50];
@@ -21,9 +22,34 @@ export default function Pagination({
   onPageSizeChange,
 }: PaginationProps) {
   const [isPageSizeOpen, setIsPageSizeOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ left: 0, top: 0 });
+  const pageSizeButtonRef = useRef<HTMLButtonElement>(null);
   const start = totalItems === 0 ? 0 : ((page - 1) * pageSize) + 1;
   const end = Math.min(page * pageSize, totalItems);
   const hasPageControls = totalItems > pageSize;
+
+  useLayoutEffect(() => {
+    if (!isPageSizeOpen) return;
+
+    const updateMenuPosition = () => {
+      const rect = pageSizeButtonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const menuHeight = (pageSizeOptions.length * 32) + 8;
+      setMenuPosition({
+        left: rect.left,
+        top: Math.max(8, rect.top - menuHeight - 6),
+      });
+    };
+
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [isPageSizeOpen]);
 
   return (
     <div className="flex flex-col gap-3 border-t border-finance-100 px-1 pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -31,9 +57,10 @@ export default function Pagination({
         <span>Tampilkan</span>
         <div className="relative">
           <button
+            ref={pageSizeButtonRef}
             type="button"
             onClick={() => setIsPageSizeOpen((value) => !value)}
-            className="flex h-9 min-w-[70px] items-center justify-between gap-2 rounded-md border border-finance-200 bg-white px-3 text-sm font-semibold text-finance-900 transition-colors hover:border-finance-300 focus:outline-none focus:ring-2 focus:ring-accent/25"
+            className="dropdown-trigger flex h-9 min-w-[70px] items-center justify-between gap-2 rounded-md border border-finance-200 bg-white px-3 text-sm font-semibold text-finance-900 transition-colors hover:border-finance-300 focus:outline-none"
             aria-haspopup="listbox"
             aria-expanded={isPageSizeOpen}
             aria-label="Jumlah data per halaman"
@@ -41,7 +68,7 @@ export default function Pagination({
             <span>{pageSize}</span>
             <ChevronDown size={15} className={`text-finance-500 transition-transform ${isPageSizeOpen ? 'rotate-180' : ''}`} />
           </button>
-          {isPageSizeOpen && (
+          {isPageSizeOpen && createPortal(
             <>
               <button
                 type="button"
@@ -51,7 +78,8 @@ export default function Pagination({
               />
               <div
                 role="listbox"
-                className="animate-dropdown-in absolute left-0 top-[calc(100%+6px)] z-50 w-[86px] overflow-hidden rounded-lg border border-finance-200 bg-white p-1 shadow-xl"
+                style={{ left: menuPosition.left, top: menuPosition.top }}
+                className="dropdown-surface premium-dark animate-dropdown-up-in fixed z-[1400] w-[86px] overflow-hidden rounded-lg border border-finance-200 bg-[#0c0c0f] p-1 shadow-xl"
               >
                 {pageSizeOptions.map((size) => {
                   const selected = pageSize === size;
@@ -75,7 +103,8 @@ export default function Pagination({
                   );
                 })}
               </div>
-            </>
+            </>,
+            document.body,
           )}
         </div>
         <span>data</span>

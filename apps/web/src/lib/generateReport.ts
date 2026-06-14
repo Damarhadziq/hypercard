@@ -186,6 +186,7 @@ export async function generateExcelReport(
     { key: 'modal', width: 18 },
     { key: 'sold', width: 18 },
     { key: 'buyer', width: 27 },
+    { key: 'paymentMethod', width: 20 },
     { key: 'spacer', width: 3 },
     { key: 'summaryLabel', width: 18 },
     { key: 'summaryValue', width: 18 },
@@ -199,7 +200,7 @@ export async function generateExcelReport(
     right: { style: 'thin' as const, color: { argb: 'FF000000' } },
   };
 
-  ws.mergeCells('A2:F3');
+  ws.mergeCells('A2:G3');
   const title = ws.getCell('A2');
   title.value = `REKAP HYPERCARD - ${periodLabel.toUpperCase()}`;
   title.font = { bold: true, size: 12, color: { argb: 'FF000000' } };
@@ -208,7 +209,7 @@ export async function generateExcelReport(
   title.border = border;
 
   const headerRow = ws.getRow(4);
-  headerRow.values = ['TANGGAL BELI', 'NAMA ITEM', 'JUMLAH', 'Harga Modal/pcs', 'Harga Sold / Pcs', 'NAMA BUYER'];
+  headerRow.values = ['TANGGAL BELI', 'NAMA ITEM', 'JUMLAH', 'Harga Modal/pcs', 'Harga Sold / Pcs', 'NAMA BUYER', 'METODE PEMBAYARAN'];
   headerRow.height = 22;
   headerRow.eachCell({ includeEmpty: true }, (cell) => {
     cell.font = { bold: true, color: { argb: 'FF000000' } };
@@ -219,12 +220,17 @@ export async function generateExcelReport(
   let rowIndex = 5;
   let soldTotal = 0;
   let profitTotal = 0;
+  let bcaTotal = 0;
+  let mandiriTotal = 0;
   const sortedTransactions = [...filtered].sort((a, b) => (
     new Date(a.date).getTime() - new Date(b.date).getTime()
   ));
 
   for (const trx of sortedTransactions) {
     const customer = getTransactionCustomer(trx, customers);
+    if (trx.paymentMethod === 'BCA') bcaTotal += trx.total;
+    if (trx.paymentMethod === 'Mandiri') mandiriTotal += trx.total;
+
     for (const item of trx.items) {
       const product = productMap.get(item.productId);
       const buyPrice = item.buyPrice ?? product?.buyPrice ?? 0;
@@ -240,6 +246,7 @@ export async function generateExcelReport(
         buyPrice || '',
         item.price,
         customer.name || trx.customerName || '-',
+        trx.paymentMethod || 'Tanpa metode',
       ];
       row.height = 20;
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
@@ -266,21 +273,27 @@ export async function generateExcelReport(
   ws.getCell(`E${totalRowIndex}`).font = { bold: true };
   ws.getCell(`E${totalRowIndex}`).alignment = { horizontal: 'right' };
 
-  ws.mergeCells('H2:I3');
-  const profitTitle = ws.getCell('H2');
-  profitTitle.value = 'TOTAL KEUNTUNGAN';
-  profitTitle.font = { bold: true, size: 11, color: { argb: 'FF000000' } };
-  profitTitle.alignment = { vertical: 'middle', horizontal: 'center' };
-  profitTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-  profitTitle.border = border;
+  const addSummaryBox = (titleRange: string, valueRange: string, titleText: string, value: number) => {
+    ws.mergeCells(titleRange);
+    const titleCell = ws.getCell(titleRange.split(':')[0]!);
+    titleCell.value = titleText;
+    titleCell.font = { bold: true, size: 11, color: { argb: 'FF000000' } };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+    titleCell.border = border;
 
-  ws.mergeCells('H4:I4');
-  const profitValue = ws.getCell('H4');
-  profitValue.value = profitTotal;
-  profitValue.numFmt = simpleCurrencyFormat;
-  profitValue.font = { bold: true, size: 12, color: { argb: 'FF000000' } };
-  profitValue.alignment = { vertical: 'middle', horizontal: 'center' };
-  profitValue.border = border;
+    ws.mergeCells(valueRange);
+    const valueCell = ws.getCell(valueRange.split(':')[0]!);
+    valueCell.value = value;
+    valueCell.numFmt = simpleCurrencyFormat;
+    valueCell.font = { bold: true, size: 12, color: { argb: 'FF000000' } };
+    valueCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    valueCell.border = border;
+  };
+
+  addSummaryBox('I2:J3', 'I4:J4', 'TOTAL KEUNTUNGAN', profitTotal);
+  addSummaryBox('I6:J6', 'I7:J7', 'TOTAL BCA', bcaTotal);
+  addSummaryBox('I9:J9', 'I10:J10', 'TOTAL MANDIRI', mandiriTotal);
 
   ws.eachRow((row) => {
     row.eachCell({ includeEmpty: true }, (cell) => {

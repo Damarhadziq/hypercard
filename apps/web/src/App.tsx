@@ -1,9 +1,13 @@
 import React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { BarChart3, Home, MoreHorizontal, PanelLeftClose, PanelLeftOpen, ShoppingBag, Users, FileText, CreditCard, LogOut, UserCog } from 'lucide-react';
 import type { Session } from './pages/Login';
 import { FeedbackProvider } from './components/Feedback';
-import { useAuthSession, useSignOut } from './hooks/useApiQueries';
+import { queryKeys, useAuthSession, useSignOut } from './hooks/useApiQueries';
+import { customersService } from './services/customers';
+import { productsService } from './services/products';
+import { transactionsService } from './services/transactions';
 
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Products = React.lazy(() => import('./pages/Products'));
@@ -15,9 +19,29 @@ const TransactionDetail = React.lazy(() => import('./pages/TransactionDetail'));
 const InvoicePrintPage = React.lazy(() => import('./pages/InvoicePrintPage'));
 const Admins = React.lazy(() => import('./pages/Admins'));
 const Login = React.lazy(() => import('./pages/Login'));
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+const LAST_ACTIVITY_KEY = 'hypercard:last-activity';
+
+function AppLoader({ fullScreen = false, label = 'Memuat halaman...' }: { fullScreen?: boolean; label?: string }) {
+  return (
+    <div
+      className={`app-loader premium-dark flex items-center justify-center bg-[#050506] ${
+        fullScreen ? 'min-h-screen w-full' : 'h-full min-h-64 w-full'
+      }`}
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    >
+      <div className="flex flex-col items-center gap-4">
+        <div className="app-loader-wordmark" aria-hidden="true" />
+        <span className="sr-only">{label}</span>
+      </div>
+    </div>
+  );
+}
 
 function PageFallback() {
-  return <p className="p-4 text-sm font-medium text-finance-500">Memuat halaman...</p>;
+  return <AppLoader />;
 }
 
 function AppLayout({ children, session, onLogout }: { children: React.ReactNode; session: Session; onLogout: () => void }) {
@@ -70,7 +94,7 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
           ) : (
             <>
               <div className="flex min-w-0 flex-1 items-center">
-                <h1 className="truncate text-xl font-bold tracking-tight">Hypercard</h1>
+                <h1 className="font-brand truncate text-xl font-semibold">Hypercard</h1>
               </div>
             <button
               type="button"
@@ -128,7 +152,12 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
             </button>
           </div>
         </header>
-        <div key={currentPath} className="app-content-scroll animate-soft-in min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 md:px-8 md:py-5">
+        <div
+          key={currentPath}
+          className={`app-content-scroll animate-soft-in min-h-0 min-w-0 flex-1 overflow-x-hidden p-4 md:px-8 md:py-5 ${
+            currentPath.startsWith('/transactions/') ? 'overflow-y-auto md:overflow-y-hidden' : 'overflow-y-auto'
+          }`}
+        >
           {children}
         </div>
       </main>
@@ -246,24 +275,116 @@ function SuperadminRoute({ session }: { session: Session }) {
 }
 
 function App() {
+  const queryClient = useQueryClient();
   const sessionQuery = useAuthSession();
   const signOut = useSignOut();
+  const [appStartedAt] = React.useState(() => Date.now());
   const session = sessionQuery.data ?? null;
+  const persistedActivity = Number(window.localStorage.getItem(LAST_ACTIVITY_KEY) || 0);
+  const isPersistedSessionIdle = Boolean(
+    session && persistedActivity && appStartedAt - persistedActivity >= IDLE_TIMEOUT_MS,
+  );
+  const [isOpeningAdmin, setIsOpeningAdmin] = React.useState(false);
+  const openingTimerRef = React.useRef<number | null>(null);
 
-  const handleLogin = () => {
+  const handleLogin = (authenticatedSession: Session) => {
+    window.localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+    setIsOpeningAdmin(true);
+    queryClient.setQueryData(queryKeys.authSession, authenticatedSession);
     window.history.replaceState(null, '', '/');
+
+    const listParams = { limit: 1000 };
+    void import('./pages/Dashboard');
+    void Promise.allSettled([
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.transactions(listParams),
+        queryFn: () => transactionsService.list(listParams),
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.products(listParams),
+        queryFn: () => productsService.list(listParams),
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.customers(listParams),
+        queryFn: () => customersService.list(listParams),
+      }),
+    ]);
+
+    if (openingTimerRef.current) {
+      window.clearTimeout(openingTimerRef.current);
+    }
+    openingTimerRef.current = window.setTimeout(() => {
+      setIsOpeningAdmin(false);
+      openingTimerRef.current = null;
+    }, 2200);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = React.useCallback(async () => {
+    setIsOpeningAdmin(false);
+    window.localStorage.removeItem(LAST_ACTIVITY_KEY);
     await signOut.mutateAsync();
-  };
+  }, [signOut]);
+
+  React.useEffect(() => {
+    if (!session) return;
+
+    let timeoutId: number;
+    let lastPersistedAt = 0;
+
+    const logoutWhenIdle = () => {
+      const lastActivity = Number(window.localStorage.getItem(LAST_ACTIVITY_KEY) || Date.now());
+      const remaining = IDLE_TIMEOUT_MS - (Date.now() - lastActivity);
+      window.clearTimeout(timeoutId);
+      if (remaining <= 0) {
+        void handleLogout();
+        return;
+      }
+      timeoutId = window.setTimeout(logoutWhenIdle, remaining);
+    };
+
+    const recordActivity = () => {
+      const now = Date.now();
+      if (now - lastPersistedAt < 15_000) return;
+      lastPersistedAt = now;
+      window.localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+      logoutWhenIdle();
+    };
+
+    const storedActivity = Number(window.localStorage.getItem(LAST_ACTIVITY_KEY) || 0);
+    if (!storedActivity) {
+      window.localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+    }
+    logoutWhenIdle();
+
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach((event) => window.addEventListener(event, recordActivity, { passive: true }));
+    window.addEventListener('focus', logoutWhenIdle);
+    window.addEventListener('hypercard:session-expired', handleLogout);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      events.forEach((event) => window.removeEventListener(event, recordActivity));
+      window.removeEventListener('focus', logoutWhenIdle);
+      window.removeEventListener('hypercard:session-expired', handleLogout);
+    };
+  }, [handleLogout, session]);
+
+  React.useEffect(() => () => {
+    if (openingTimerRef.current) {
+      window.clearTimeout(openingTimerRef.current);
+    }
+  }, []);
 
   if (sessionQuery.isLoading) {
-    return (
-      <main className="premium-dark flex min-h-screen items-center justify-center bg-[#050506] px-4 text-white">
-        <p className="text-sm font-medium text-finance-500">Memuat sesi...</p>
-      </main>
-    );
+    return <AppLoader fullScreen label="Memuat sesi..." />;
+  }
+
+  if (isPersistedSessionIdle) {
+    return <AppLoader fullScreen label="Mengakhiri sesi..." />;
+  }
+
+  if (session && isOpeningAdmin) {
+    return <AppLoader fullScreen label="Menyiapkan dashboard..." />;
   }
 
   if (!session) {

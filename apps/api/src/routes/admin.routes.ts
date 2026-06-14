@@ -11,13 +11,13 @@ router.use(requireRole('superadmin'));
 
 // Validation schemas
 const createAdminSchema = z.object({
-  name: z.string().min(1, 'Admin name is required'),
-  email: z.string().email('Valid email is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  name: z.string().trim().min(2, 'Nama admin minimal 2 karakter').max(80),
+  email: z.string().trim().toLowerCase().email('Email tidak valid').max(160),
+  password: z.string().min(8, 'Password minimal 8 karakter').max(128),
 });
 
 const updatePasswordSchema = z.object({
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(8, 'Password minimal 8 karakter').max(128),
 });
 
 /**
@@ -42,11 +42,13 @@ router.post('/', async (req, res) => {
     const newAdmin = await adminService.create(parsed);
     res.status(201).json(newAdmin);
   } catch (error) {
-    if (error instanceof Error && error.message.includes('already')) {
-      res.status(409).json({ error: 'Email already registered' });
+    const message = error instanceof Error ? error.message : '';
+    if (/already|exists|registered/i.test(message)) {
+      res.status(409).json({ error: 'Email sudah terdaftar' });
       return;
     }
-    throw error;
+    console.error('Create admin error:', error);
+    res.status(500).json({ error: 'Admin gagal dibuat. Silakan coba kembali.' });
   }
 });
 
@@ -61,7 +63,7 @@ router.patch('/:id/password', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Password update error:', error);
-    res.status(500).json({ error: 'Failed to update password' });
+    res.status(500).json({ error: 'Password gagal diperbarui. Silakan coba kembali.' });
   }
 });
 

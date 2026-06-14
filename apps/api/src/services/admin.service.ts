@@ -53,26 +53,26 @@ export const adminService = {
   },
 
   async create(input: CreateAdminInput) {
-    // Use Better Auth's API to create users so passwords are properly hashed
-    const newUser = await (auth.api.signUpEmail as unknown as (input: {
+    // Use the admin endpoint so the credential account and role are created together.
+    const result = await (auth.api.createUser as unknown as (input: {
       body: {
         name: string;
         email: string;
         password: string;
         role: string;
-        status: string;
+        data: { status: string };
       };
-    }) => Promise<unknown>)({
+    }) => Promise<{ user: unknown }>)({
       body: {
         name: input.name,
         email: input.email,
         password: input.password,
         role: 'admin',
-        status: 'active',
+        data: { status: 'active' },
       },
     });
 
-    return newUser;
+    return result.user;
   },
 
   async updatePassword(id: string, password: string) {

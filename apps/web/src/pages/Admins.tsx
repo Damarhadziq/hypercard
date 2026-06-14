@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@pokemon-finance/ui';
 import { KeyRound, PlusCircle, ShieldCheck, Trash2, X } from 'lucide-react';
 import type { AdminUser } from '../store/useStore';
@@ -6,6 +6,7 @@ import SideDrawer from '../components/SideDrawer';
 import { useFeedback } from '../components/Feedback';
 import Pagination from '../components/Pagination';
 import { useAdminMutations, useAdmins } from '../hooks/useApiQueries';
+import useClampedPage from '../hooks/useClampedPage';
 
 function formatLoginDate(value?: string) {
   if (!value) return '-';
@@ -35,14 +36,16 @@ export default function Admins() {
   const [passwordDrafts, setPasswordDrafts] = useState<Record<string, string>>({});
   const { notify, confirm } = useFeedback();
 
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  useClampedPage(page, totalPages, setPage, !adminsQuery.isFetching);
 
   const handleAddAdmin = async () => {
     const email = newAdmin.email.trim().toLowerCase();
     if (!newAdmin.name.trim() || !email || !newAdmin.password.trim()) {
       notify('error', 'Form admin belum lengkap', 'Nama, email, dan password admin wajib diisi.');
+      return;
+    }
+    if (newAdmin.password.length < 8) {
+      notify('error', 'Password terlalu pendek', 'Password awal minimal 8 karakter.');
       return;
     }
 
@@ -58,6 +61,23 @@ export default function Admins() {
     } catch (error) {
       notify('error', 'Admin gagal ditambahkan', error instanceof Error ? error.message : 'Terjadi kesalahan saat menambahkan admin.');
     }
+  };
+
+  const isAddFormDirty = Boolean(newAdmin.name.trim() || newAdmin.email.trim() || newAdmin.password);
+  const finalizeAddAdminClose = () => {
+    setIsAddOpen(false);
+    setNewAdmin({ name: '', email: '', password: '' });
+  };
+  const canCloseAddAdmin = async () => {
+    if (!isAddFormDirty) return true;
+    return confirm({
+      title: 'Batalkan tambah admin?',
+      highlightLabel: 'Draft admin',
+      highlight: newAdmin.name.trim() || newAdmin.email.trim() || 'Admin baru',
+      message: 'Data yang sudah diisi belum disimpan dan akan hilang.',
+      confirmText: 'Tetap Batalkan',
+      danger: true,
+    });
   };
 
   const handleChangePassword = async (admin: AdminUser) => {
@@ -227,10 +247,10 @@ export default function Admins() {
       </Card>
 
       {isAddOpen && (
-        <SideDrawer onClose={() => setIsAddOpen(false)} widthClassName="md:max-w-2xl">
+        <SideDrawer onClose={finalizeAddAdminClose} onBeforeClose={canCloseAddAdmin} widthClassName="md:max-w-2xl">
           {(requestClose) => (
           <>
-            <div className="sticky top-0 z-10 flex h-16 items-center justify-between bg-finance-50 px-5 md:px-8">
+            <div className="side-drawer-header sticky top-0 z-10 flex items-start justify-between gap-4 bg-finance-50 px-6 py-5 md:px-8">
               <div>
                 <h2 className="text-lg font-bold text-finance-950">Tambah Admin</h2>
                 <p className="mt-0.5 text-sm text-finance-500">Buat akun admin operasional baru.</p>
@@ -271,6 +291,7 @@ export default function Admins() {
                       onChange={(event) => setNewAdmin({ ...newAdmin, password: event.target.value })}
                       placeholder="Password awal"
                     />
+                    <p className="text-xs text-finance-500">Minimal 8 karakter.</p>
                   </div>
                 </CardContent>
               </Card>

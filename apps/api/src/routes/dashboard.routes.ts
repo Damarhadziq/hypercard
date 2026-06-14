@@ -54,4 +54,13 @@ router.get('/report-items', async (req, res) => {
   res.json(result);
 });
 
+router.get('/report-summary', async (req, res) => {
+  const result = await dashboardService.getReportSummary({
+    mode: req.query.mode as 'all' | 'month' | 'year' | undefined,
+    month: req.query.month !== undefined ? parseInt(req.query.month as string) : undefined,
+    year: req.query.year !== undefined ? parseInt(req.query.year as string) : undefined,
+  });
+  res.json(result);
+});
+
 export default router;

@@ -242,12 +242,6 @@ function InvoiceSummary({ transaction, sellerInfo }: { transaction: Transaction;
           <span className="font-bold">SUBTOTAL</span>
           <span>{rupiah(transaction.subtotal)}</span>
         </div>
-        {transaction.discount > 0 && (
-          <div className="flex justify-between border-b border-[#e5b3b5] px-3 py-2 text-[#8a6a16]">
-            <span className="font-bold">DISKON</span>
-            <span>- {rupiah(transaction.discount)}</span>
-          </div>
-        )}
         <div className="flex justify-between px-3 py-2">
           <span className="font-bold">ONGKIR</span>
           <span>{rupiah(transaction.shippingCost ?? 0)}</span>

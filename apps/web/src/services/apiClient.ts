@@ -76,6 +76,9 @@ export async function apiClient<T>(path: string, options: RequestOptions = {}): 
   const payload = contentType.includes('application/json') ? await response.json() : await response.text();
 
   if (!response.ok) {
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent('hypercard:session-expired'));
+    }
     throw new ApiError(getApiErrorMessage(payload, response.status), response.status, payload);
   }
 

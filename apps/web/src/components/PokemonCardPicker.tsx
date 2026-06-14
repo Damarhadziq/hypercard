@@ -22,7 +22,7 @@ export default function PokemonCardPicker({
   const [query, setQuery] = useState('');
   const [setFilter, setSetFilter] = useState('');
   const [sets, setSets] = useState<PokemonTcgSet[]>(FALLBACK_POKEMON_SETS);
-  const [isLoadingSets, setIsLoadingSets] = useState(false);
+  const [isLoadingSets, setIsLoadingSets] = useState(true);
   const [results, setResults] = useState<PokemonTcgCard[]>([]);
   const [page, setPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
@@ -49,7 +49,6 @@ export default function PokemonCardPicker({
 
   useEffect(() => {
     const controller = new AbortController();
-    setIsLoadingSets(true);
     fetchPokemonSets(controller.signal)
       .then(setSets)
       .catch(() => undefined)
