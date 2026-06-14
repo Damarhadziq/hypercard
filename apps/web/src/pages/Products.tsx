@@ -220,8 +220,8 @@ export default function Products() {
   };
 
   const handleSaveProduct = async () => {
-    if (!newProduct.name?.trim() || !newProduct.setName?.trim() || !newProduct.image || !newProduct.language || !newProduct.condition || !newProduct.rarity || !newProduct.buyPrice || !newProduct.sellPrice || !newProduct.stock || newProduct.stock < 1) {
-      notify('error', 'Form produk belum lengkap', 'Pilih kartu, bahasa, kondisi, rarity, stok, harga modal, dan harga jual.');
+    if (!newProduct.name?.trim() || !newProduct.setName?.trim() || !newProduct.image || !newProduct.language || !newProduct.condition || !newProduct.rarity || !newProduct.sellPrice || !newProduct.stock || newProduct.stock < 1) {
+      notify('error', 'Form produk belum lengkap', 'Pilih kartu, bahasa, kondisi, rarity, stok, dan harga jual.');
       return;
     }
 
@@ -547,8 +547,7 @@ export default function Products() {
                       </div>
                     </div>
                     <CurrencyInput
-                      label="Harga Modal"
-                      required
+                      label="Harga Modal (Opsional)"
                       value={newProduct.buyPrice || 0}
                       onChange={(value) => setNewProduct({ ...newProduct, buyPrice: value })}
                     />
