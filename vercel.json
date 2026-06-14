@@ -5,12 +5,16 @@
   "buildCommand": "npm run build --workspace=apps/api && npm run build --workspace=apps/web",
   "outputDirectory": "apps/web/dist",
   "functions": {
-    "api/**/*.ts": {
+    "api/index.ts": {
       "maxDuration": 30,
       "includeFiles": "apps/api/dist/**"
     }
   },
   "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api?__path=:path*"
+    },
     {
       "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
