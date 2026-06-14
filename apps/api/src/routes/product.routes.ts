@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import multer from 'multer';
-import path from 'path';
 import { productService } from '../services/product.service.js';
+import { storageService } from '../services/storage.service.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -10,20 +10,8 @@ const router = Router();
 // Apply auth to all product routes
 router.use(requireAuth);
 
-// Multer config for product image uploads
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, path.resolve('uploads'));
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const ext = path.extname(file.originalname);
-    cb(null, `product-${uniqueSuffix}${ext}`);
-  },
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (_req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp'];
@@ -127,15 +115,22 @@ router.post('/:id/image', upload.single('image'), async (req, res) => {
     return;
   }
 
-  const imagePath = `/uploads/${req.file.filename}`;
-  const product = await productService.updateImage(String(req.params.id), imagePath);
-
-  if (!product) {
+  const productId = String(req.params.id);
+  const existingProduct = await productService.getById(productId);
+  if (!existingProduct) {
     res.status(404).json({ error: 'Product not found' });
     return;
   }
 
-  res.json(product);
+  const uploaded = await storageService.uploadProductImage(productId, req.file);
+
+  try {
+    const product = await productService.updateImage(productId, uploaded.publicUrl);
+    res.json(product);
+  } catch (error) {
+    await storageService.removeObject(uploaded.objectPath).catch(() => undefined);
+    throw error;
+  }
 });
 
 export default router;

@@ -12,6 +12,7 @@ const trustedOrigins = Array.from(new Set([
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
 ]));
+const usesSecureCrossSiteCookies = env.BETTER_AUTH_URL.startsWith('https://');
 
 export const auth = (betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -51,6 +52,21 @@ export const auth = (betterAuth({
   session: {
     expiresIn: 60 * 15,
     updateAge: 60 * 5,
+  },
+
+  advanced: {
+    useSecureCookies: usesSecureCrossSiteCookies,
+    defaultCookieAttributes: usesSecureCrossSiteCookies
+      ? {
+          sameSite: 'none',
+          secure: true,
+          httpOnly: true,
+        }
+      : {
+          sameSite: 'lax',
+          secure: false,
+          httpOnly: true,
+        },
   },
 
   plugins: [admin()],

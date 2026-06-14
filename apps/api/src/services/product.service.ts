@@ -1,6 +1,7 @@
 import { eq, ilike, or, sql, desc } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { products, transactionItems } from '../db/schema.js';
+import { storageService } from './storage.service.js';
 
 export interface CreateProductInput {
   name: string;
@@ -92,6 +93,7 @@ export const productService = {
   },
 
   async update(id: string, input: UpdateProductInput) {
+    const existing = 'image' in input ? await this.getById(id) : null;
     const result = await db
       .update(products)
       .set({
@@ -101,10 +103,18 @@ export const productService = {
       .where(eq(products.id, id))
       .returning();
 
-    return result[0] ?? null;
+    const updated = result[0] ?? null;
+    if (updated && existing?.image && input.image !== existing.image) {
+      await storageService.removeManagedImageSafely(existing.image);
+    }
+
+    return updated;
   },
 
   async delete(id: string) {
+    const existing = await this.getById(id);
+    if (!existing) return false;
+
     const [usage] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(transactionItems)
@@ -125,16 +135,29 @@ export const productService = {
       .where(eq(products.id, id))
       .returning({ id: products.id });
 
-    return result.length > 0;
+    const deleted = result.length > 0;
+    if (deleted) {
+      await storageService.removeManagedImageSafely(existing.image);
+    }
+
+    return deleted;
   },
 
   async updateImage(id: string, imagePath: string) {
+    const existing = await this.getById(id);
+    if (!existing) return null;
+
     const result = await db
       .update(products)
       .set({ image: imagePath, updatedAt: new Date() })
       .where(eq(products.id, id))
       .returning();
 
-    return result[0] ?? null;
+    const updated = result[0] ?? null;
+    if (updated && existing.image !== imagePath) {
+      await storageService.removeManagedImageSafely(existing.image);
+    }
+
+    return updated;
   },
 };

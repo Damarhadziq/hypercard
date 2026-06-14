@@ -1,7 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
-import fs from 'fs';
 import { env } from './env.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { db } from './db/index.js';
@@ -51,15 +49,6 @@ app.set('trust proxy', 1);
 app.use(securityHeaders);
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: false, limit: '2mb' }));
-
-// Ensure uploads directory exists
-const uploadsDir = path.resolve('uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Serve uploaded files statically
-app.use('/uploads', express.static(uploadsDir));
 
 // ──────────────────────────────────────────────────────────
 // Health check
