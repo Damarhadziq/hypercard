@@ -303,11 +303,11 @@
   }
 
   @keyframes login-button-shimmer {
-    0% {
-      transform: translateX(-260%) skewX(-18deg);
+    from {
+      transform: translateX(0);
     }
-    100% {
-      transform: translateX(460%) skewX(-18deg);
+    to {
+      transform: translateX(240%);
     }
   }
 
@@ -332,22 +332,25 @@
   .login-submit-button::after {
     position: absolute;
     z-index: 1;
-    top: -30%;
-    bottom: -30%;
-    left: 0;
-    width: 32%;
+    top: 0;
+    bottom: 0;
+    left: -80%;
+    width: 80%;
     content: '';
     pointer-events: none;
     opacity: 0;
     background: linear-gradient(
-      90deg,
+      105deg,
       transparent 0%,
-      rgba(214, 180, 93, 0.06) 20%,
-      rgba(255, 239, 174, 0.62) 50%,
-      rgba(214, 180, 93, 0.06) 80%,
+      rgba(255, 255, 255, 0.08) 20%,
+      rgba(255, 255, 255, 0.62) 40%,
+      rgba(240, 210, 123, 0.92) 50%,
+      rgba(255, 255, 255, 0.62) 60%,
+      rgba(255, 255, 255, 0.08) 80%,
       transparent 100%
     );
-    transform: translateX(-260%) skewX(-18deg);
+    filter: blur(0.5px);
+    transform: translateX(0);
     transition: opacity 220ms ease;
   }
 
@@ -367,14 +370,14 @@
 
   .login-submit-button-active::after {
     opacity: 1;
-    animation: login-button-shimmer 2.2s linear infinite;
+    animation: login-button-shimmer 1.65s linear infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
     .login-submit-button-active::after {
       animation: none;
-      opacity: 0.18;
-      transform: translateX(110%) skewX(-18deg);
+      opacity: 0.24;
+      transform: translateX(120%);
     }
   }
 
