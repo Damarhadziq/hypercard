@@ -240,13 +240,13 @@ function ManualTransactionDrawer({
                     <div className="grid grid-cols-2 gap-3 rounded-lg bg-finance-50 p-3 sm:col-span-2">
                       <div>
                         <p className="text-xs font-medium text-finance-500">Margin per kartu</p>
-                        <p className={`mt-1 text-base font-bold ${form.sellPrice >= form.buyPrice ? 'text-green-700' : 'text-primary'}`}>
+                        <p className={`mt-1 text-base font-bold ${form.sellPrice >= form.buyPrice ? 'text-green-700' : 'text-red-500'}`}>
                           Rp {(form.sellPrice - form.buyPrice).toLocaleString('id-ID')}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs font-medium text-finance-500">Persentase margin</p>
-                        <p className={`mt-1 text-base font-bold ${form.sellPrice >= form.buyPrice ? 'text-green-700' : 'text-primary'}`}>
+                        <p className={`mt-1 text-base font-bold ${form.sellPrice >= form.buyPrice ? 'text-green-700' : 'text-red-500'}`}>
                           {form.buyPrice ? `${(((form.sellPrice - form.buyPrice) / form.buyPrice) * 100).toFixed(1)}%` : '0%'}
                         </p>
                       </div>

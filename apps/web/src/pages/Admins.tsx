@@ -228,7 +228,7 @@ export default function Admins() {
                           disabled={admin.role === 'superadmin'}
                           onClick={() => handleDeleteAdmin(admin)}
                           aria-label={`Hapus ${admin.name}`}
-                          className="h-9 w-9 text-primary hover:text-primary-hover"
+                          className="h-9 w-9 text-red-500 hover:text-red-400"
                         >
                           <Trash2 size={16} />
                         </Button>

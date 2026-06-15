@@ -77,7 +77,7 @@ export default function CurrencyInput({ value, onChange, label, required = false
           <button
             type="button"
             onClick={() => updateValue(0)}
-            className="rounded-md px-2 py-1 text-[11px] font-semibold text-primary hover:bg-red-50"
+            className="rounded-md px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
           >
             Reset
           </button>

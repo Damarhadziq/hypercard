@@ -472,8 +472,8 @@ export default function Dashboard() {
                   >
                     <defs>
                       <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#d6b45d" stopOpacity={0.24}/>
+                        <stop offset="95%" stopColor="#d6b45d" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(214, 180, 93, 0.22)" />
@@ -509,7 +509,7 @@ export default function Dashboard() {
                         );
                       }}
                     />
-                    <Area type="monotone" dataKey="total" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" isAnimationActive animationDuration={700} animationEasing="ease-out" />
+                    <Area type="monotone" dataKey="total" stroke="#d6b45d" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" isAnimationActive animationDuration={700} animationEasing="ease-out" />
                   </AreaChart>
                 </ResponsiveContainer>
               )}

@@ -86,7 +86,7 @@ export default function Login({ onLogin }: LoginProps) {
         </div>
       </div>
 
-      {error && <p className="text-sm font-medium text-primary">{error}</p>}
+      {error && <p className="text-sm font-medium text-red-500">{error}</p>}
 
       <Button
         type="submit"

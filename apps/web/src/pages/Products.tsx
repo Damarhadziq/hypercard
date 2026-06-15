@@ -28,7 +28,7 @@ const conditionBadgeClasses: Record<string, string> = {
   Excellent: 'border-sky-400/35 bg-sky-500/12 text-sky-400',
   Good: 'border-accent/40 bg-accent/12 text-accent',
   Played: 'border-orange-400/40 bg-orange-500/12 text-orange-400',
-  Damaged: 'border-primary/40 bg-primary/12 text-primary',
+  Damaged: 'border-red-500/40 bg-red-500/10 text-red-500',
 };
 
 function getConditionBadgeClass(condition: string) {
@@ -38,7 +38,7 @@ function getConditionBadgeClass(condition: string) {
 function getProfitTextClass(sellPrice = 0, buyPrice = 0) {
   const margin = sellPrice - buyPrice;
   if (margin > 0) return 'text-green-500';
-  if (margin < 0) return 'text-primary';
+  if (margin < 0) return 'text-red-500';
   return 'text-finance-950';
 }
 
@@ -366,7 +366,7 @@ export default function Products() {
                 <Button variant="ghost" size="icon" onClick={() => openEditDrawer(selectedProduct)} aria-label="Edit produk" className="text-finance-500 hover:text-finance-900">
                   <Pencil size={18} />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => confirmDeleteProduct(selectedProduct)} aria-label="Hapus produk" className="text-primary hover:text-primary-hover">
+                <Button variant="ghost" size="icon" onClick={() => confirmDeleteProduct(selectedProduct)} aria-label="Hapus produk" className="text-red-500 hover:text-red-400">
                   <Trash2 size={18} />
                 </Button>
                 <Button variant="ghost" size="icon" onClick={requestClose} aria-label="Tutup detail">
@@ -560,13 +560,13 @@ export default function Products() {
                       <div className="md:col-span-2 grid grid-cols-2 gap-3 rounded-lg bg-finance-50 p-3">
                         <div>
                           <p className="text-xs font-medium text-finance-500">Margin per kartu</p>
-                          <p className={`mt-1 text-base font-bold ${(newProduct.sellPrice || 0) >= (newProduct.buyPrice || 0) ? 'text-green-700' : 'text-primary'}`}>
+                          <p className={`mt-1 text-base font-bold ${(newProduct.sellPrice || 0) >= (newProduct.buyPrice || 0) ? 'text-green-700' : 'text-red-500'}`}>
                             Rp {((newProduct.sellPrice || 0) - (newProduct.buyPrice || 0)).toLocaleString('id-ID')}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs font-medium text-finance-500">Persentase margin</p>
-                          <p className={`mt-1 text-base font-bold ${(newProduct.sellPrice || 0) >= (newProduct.buyPrice || 0) ? 'text-green-700' : 'text-primary'}`}>
+                          <p className={`mt-1 text-base font-bold ${(newProduct.sellPrice || 0) >= (newProduct.buyPrice || 0) ? 'text-green-700' : 'text-red-500'}`}>
                             {newProduct.buyPrice
                               ? `${((((newProduct.sellPrice || 0) - newProduct.buyPrice) / newProduct.buyPrice) * 100).toFixed(1)}%`
                               : '0%'}

@@ -89,7 +89,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           <div className="premium-dark pointer-events-none fixed right-4 top-4 z-[1300] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2">
             {toasts.map((toast) => {
               const Icon = toast.type === 'success' ? CheckCircle2 : toast.type === 'error' ? AlertCircle : Info;
-              const iconClass = toast.type === 'success' ? 'text-green-600' : toast.type === 'error' ? 'text-primary' : 'text-finance-600';
+              const iconClass = toast.type === 'success' ? 'text-green-600' : toast.type === 'error' ? 'text-red-500' : 'text-finance-600';
               return (
                 <div key={toast.id} className={`pointer-events-auto flex gap-3 rounded-lg border border-finance-200 bg-white p-4 shadow-xl ${toast.exiting ? 'animate-toast-out' : 'animate-toast-in'}`}>
                   <Icon size={20} className={`mt-0.5 shrink-0 ${iconClass}`} />
@@ -116,11 +116,11 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
                 {confirmation.highlight && (
                   <div className={`mt-3 rounded-md border px-3 py-2.5 ${
                     confirmation.danger
-                      ? 'border-primary/35 bg-primary/10'
+                      ? 'border-red-500/35 bg-red-500/10'
                       : 'border-accent/35 bg-accent/10'
                   }`}>
                     <p className={`text-[10px] font-bold tracking-wider ${
-                      confirmation.danger ? 'text-primary' : 'text-accent'
+                      confirmation.danger ? 'text-red-500' : 'text-accent'
                     }`}>
                       {confirmation.highlightLabel || 'Data dipilih'}
                     </p>

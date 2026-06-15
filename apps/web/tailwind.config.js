@@ -22,8 +22,8 @@ export default {
           950: '#ffffff',
         },
         primary: {
-          DEFAULT: '#dc2626',
-          hover: '#b91c1c',
+          DEFAULT: '#d6b45d',
+          hover: '#f0d27b',
         },
         accent: {
           DEFAULT: '#d6b45d',

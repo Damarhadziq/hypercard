@@ -276,7 +276,7 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
                   setIsMoreOpen(false);
                   onLogout();
                 }}
-                className="interactive-click flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-primary transition-colors hover:bg-finance-50"
+                className="interactive-click flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-red-500 transition-colors hover:bg-finance-50 hover:text-red-400"
               >
                 <LogOut size={17} />
                 Logout
@@ -326,8 +326,8 @@ function NavItem({
       to={to}
       aria-label={collapsed ? `${label}${hasCount ? `, ${count}` : ''}` : undefined}
       className={`sidebar-nav-item group relative flex h-12 w-full shrink-0 items-center rounded-lg border text-sm font-medium transition-[background-color,border-color,color,box-shadow,padding] duration-200 ease-out active:brightness-95 ${collapsed ? 'justify-center px-0' : 'justify-start px-3'} ${
-        active 
-          ? 'border-accent/45 bg-[linear-gradient(90deg,rgba(214,180,93,0.18),rgba(220,38,38,0.07)_58%,rgba(20,20,23,0.72))] text-accent shadow-[inset_3px_0_0_#d6b45d,0_10px_28px_rgba(0,0,0,0.16)]' 
+        active
+          ? 'border-accent/45 bg-[linear-gradient(90deg,rgba(214,180,93,0.18),rgba(214,180,93,0.06)_58%,rgba(20,20,23,0.72))] text-accent shadow-[inset_3px_0_0_#d6b45d,0_10px_28px_rgba(0,0,0,0.16)]'
           : 'border-transparent text-finance-500 hover:border-accent/20 hover:bg-finance-50 hover:text-accent'
       }`}
     >

@@ -199,7 +199,7 @@ export default function Customers() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-10 w-10 text-primary hover:text-primary-hover"
+                        className="h-10 w-10 text-red-500 hover:text-red-400"
                         onClick={() => handleDelete(customer)}
                         aria-label={`Hapus ${customer.name}`}
                       >
@@ -276,7 +276,7 @@ export default function Customers() {
                         >
                           <Edit2 size={16} />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary-hover" onClick={() => handleDelete(customer)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-400" onClick={() => handleDelete(customer)}>
                           <Trash2 size={16} />
                         </Button>
                       </div>
