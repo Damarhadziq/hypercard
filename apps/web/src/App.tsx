@@ -138,18 +138,18 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
             <NavItem to="/admins" icon={<UserCog size={20} />} label="Admin" active={currentPath.startsWith('/admins')} collapsed={isSidebarCollapsed} />
           )}
         </nav>
-        <div className={`${isSidebarCollapsed ? 'px-3 text-center' : 'px-6'} relative z-10 border-t border-finance-200 py-4 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}>
-          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-start gap-2'}`}>
-            <p className="text-[11px] font-medium leading-relaxed text-finance-500">
-            {isSidebarCollapsed ? '©' : '© 2026 dmrhdz.iq'}
-            </p>
+        <div className={`${isSidebarCollapsed ? 'px-3' : 'px-6'} relative z-10 border-t border-finance-200 py-3 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}>
+          <div className={`flex min-h-8 items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between gap-3'}`}>
             {!isSidebarCollapsed && (
-              <img
-                src="/hypercard-footer-logo.svg"
-                alt="Hypercard"
-                className="h-[18px] w-[18px] shrink-0 object-contain"
-              />
+              <p className="text-[11px] font-medium leading-relaxed text-finance-500">
+                © 2026 dmrhdz.iq
+              </p>
             )}
+            <img
+              src="/hypercard-footer-logo.svg"
+              alt="Hypercard"
+              className={`${isSidebarCollapsed ? 'h-8 w-8' : 'h-7 w-7'} shrink-0 object-contain`}
+            />
           </div>
         </div>
       </aside>

@@ -1,6 +1,8 @@
 import { betterAuth } from 'better-auth';
+import { APIError } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin } from 'better-auth/plugins';
+import { and, eq, gt } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { env } from '../env.js';
 import * as schema from '../db/schema.js';
@@ -53,6 +55,32 @@ export const auth = (betterAuth({
   session: {
     expiresIn: 60 * 15,
     updateAge: 60 * 5,
+  },
+
+  databaseHooks: {
+    session: {
+      create: {
+        async before(newSession) {
+          const [activeSession] = await db
+            .select({ id: schema.session.id })
+            .from(schema.session)
+            .where(
+              and(
+                eq(schema.session.userId, newSession.userId),
+                gt(schema.session.expiresAt, new Date())
+              )
+            )
+            .limit(1);
+
+          if (activeSession) {
+            throw new APIError('CONFLICT', {
+              message: 'Akun sedang digunakan di perangkat lain. Silakan logout dari sesi aktif terlebih dahulu.',
+              code: 'ACCOUNT_ALREADY_IN_USE',
+            });
+          }
+        },
+      },
+    },
   },
 
   advanced: {

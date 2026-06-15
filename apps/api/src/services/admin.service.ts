@@ -1,6 +1,7 @@
 import { eq, and, ne, desc, ilike, or, sql } from 'drizzle-orm';
+import { hashPassword } from 'better-auth/crypto';
 import { db } from '../db/index.js';
-import { user } from '../db/schema.js';
+import { account, user } from '../db/schema.js';
 import { auth } from '../lib/auth.js';
 
 export interface CreateAdminInput {
@@ -76,15 +77,22 @@ export const adminService = {
   },
 
   async updatePassword(id: string, password: string) {
-    // Use Better Auth admin plugin to set password
-    await (auth.api.setPassword as unknown as (input: { body: { userId: string; newPassword: string } }) => Promise<unknown>)({
-      body: {
-        userId: id,
-        newPassword: password,
-      },
-    });
+    const hashedPassword = await hashPassword(password);
+    const [updatedAccount] = await db
+      .update(account)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(account.userId, id),
+          eq(account.providerId, 'credential')
+        )
+      )
+      .returning({ id: account.id });
 
-    return true;
+    return Boolean(updatedAccount);
   },
 
   async toggleStatus(id: string) {

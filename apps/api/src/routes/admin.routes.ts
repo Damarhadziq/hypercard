@@ -59,7 +59,11 @@ router.post('/', async (req, res) => {
 router.patch('/:id/password', async (req, res) => {
   const parsed = updatePasswordSchema.parse(req.body);
   try {
-    await adminService.updatePassword(req.params.id, parsed.password);
+    const updated = await adminService.updatePassword(req.params.id, parsed.password);
+    if (!updated) {
+      res.status(404).json({ error: 'Akun admin atau credential password tidak ditemukan.' });
+      return;
+    }
     res.json({ success: true });
   } catch (error) {
     console.error('Password update error:', error);

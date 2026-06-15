@@ -25,7 +25,12 @@ export const authService = {
   async signIn(email: string, password: string): Promise<AuthSession> {
     const result = await authClient.signIn.email({ email, password });
     if (result.error) {
-      throw new Error(result.error.message || 'Email atau password tidak sesuai.');
+      const message = result.error.message || 'Email atau password tidak sesuai.';
+      throw new Error(
+        result.error.code === 'ACCOUNT_ALREADY_IN_USE'
+          ? 'Akun sedang digunakan di perangkat lain. Logout dari sesi aktif sebelum login kembali.'
+          : message
+      );
     }
 
     await apiClient<{ success: true }>('/auth/touch-login', { method: 'POST' });

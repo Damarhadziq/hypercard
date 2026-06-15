@@ -87,6 +87,10 @@ export default function Admins() {
       notify('error', 'Password belum diisi', 'Isi password baru terlebih dahulu.');
       return;
     }
+    if (nextPassword.length < 8) {
+      notify('error', 'Password terlalu pendek', 'Password baru minimal 8 karakter.');
+      return;
+    }
 
     try {
       await updateAdminPassword.mutateAsync({ id: admin.id, password: nextPassword });
@@ -196,9 +200,15 @@ export default function Admins() {
                           placeholder="Password baru"
                           className="h-9"
                         />
-                        <Button variant="outline" size="sm" onClick={() => handleChangePassword(admin)} className="gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleChangePassword(admin)}
+                          disabled={updateAdminPassword.isPending}
+                          className="gap-1.5"
+                        >
                           <KeyRound size={14} />
-                          Simpan
+                          {updateAdminPassword.isPending ? 'Menyimpan...' : 'Simpan'}
                         </Button>
                       </div>
                     </TableCell>
