@@ -150,8 +150,8 @@ export default function Customers() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader className="pb-4">
+      <Card className="border-0 bg-transparent shadow-none md:border md:bg-finance-50 md:shadow-sm">
+        <CardHeader className="px-0 pb-4 pt-0 md:px-6 md:pt-6">
           <div className="flex items-center space-x-2">
             <div className="relative w-full sm:max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-finance-400" />
@@ -167,7 +167,7 @@ export default function Customers() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 pb-0 md:px-6 md:pb-6">
           <div className="space-y-3 md:hidden">
             {customersQuery.isLoading ? (
               <MobileListSkeleton />
