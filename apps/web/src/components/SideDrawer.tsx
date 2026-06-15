@@ -25,7 +25,7 @@ export default function SideDrawer({ children, onClose, onBeforeClose, widthClas
   }, [isClosing, onBeforeClose, onClose]);
 
   return createPortal(
-    <div className={`premium-dark fixed left-0 top-0 z-[999] flex h-screen min-h-screen w-screen justify-end bg-[#050506]/62 backdrop-blur-[3px] ${isClosing ? 'animate-drawer-backdrop-out' : 'animate-fade-in'}`}>
+    <div className={`premium-dark fixed left-0 top-0 z-[999] flex h-screen min-h-screen w-screen justify-end bg-[#050506]/70 ${isClosing ? 'animate-drawer-backdrop-out' : 'animate-fade-in'}`}>
       <button
         type="button"
         className="hidden flex-1 cursor-pointer md:block"

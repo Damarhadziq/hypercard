@@ -402,7 +402,7 @@
     background-clip: text;
     color: transparent;
     font-family: 'Funnel Display', sans-serif;
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: clamp(1.5rem, 3.5vw, 2.15rem);
     font-weight: 700;
     letter-spacing: -0.045em;
     line-height: 1;
@@ -500,7 +500,7 @@
 
   .sidebar-nav-item:active .sidebar-nav-icon,
   .sidebar-nav-item:active .sidebar-nav-label {
-    transform: scale(0.92);
+    transform: scale(0.97);
   }
 
   .select-trigger,
