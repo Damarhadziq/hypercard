@@ -254,7 +254,7 @@ export default function Invoices() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [shipping, setShipping] = useState(() => emptyInvoiceShipping());
   const [paymentStatus, setPaymentStatus] = useState<'Lunas' | 'Belum Dibayar'>('Belum Dibayar');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Mandiri');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Lainnya');
   const [bcaAccountNumber, setBcaAccountNumber] = useState(sellerInfo.bcaAccountNumber);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [isItemListExpanded, setIsItemListExpanded] = useState(false);
@@ -325,7 +325,7 @@ export default function Invoices() {
     setItems([]);
     setShipping(emptyInvoiceShipping());
     setPaymentStatus('Belum Dibayar');
-    setPaymentMethod('Mandiri');
+    setPaymentMethod('Lainnya');
     setBcaAccountNumber(nextBcaAccountNumber);
     setSelectedProductId('');
     setIsItemListExpanded(false);
@@ -600,7 +600,10 @@ export default function Invoices() {
                   <button
                     type="button"
                     aria-pressed={paymentStatus === 'Belum Dibayar'}
-                    onClick={() => setPaymentStatus('Belum Dibayar')}
+                    onClick={() => {
+                      setPaymentStatus('Belum Dibayar');
+                      setPaymentMethod('Lainnya');
+                    }}
                     className={`flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-all active:brightness-95 ${
                       paymentStatus === 'Belum Dibayar'
                         ? 'border border-accent/45 bg-accent/15 text-accent'
@@ -613,7 +616,10 @@ export default function Invoices() {
                   <button
                     type="button"
                     aria-pressed={paymentStatus === 'Lunas'}
-                    onClick={() => setPaymentStatus('Lunas')}
+                    onClick={() => {
+                      setPaymentStatus('Lunas');
+                      if (paymentMethod === 'Lainnya') setPaymentMethod('Mandiri');
+                    }}
                     className={`flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-all active:brightness-95 ${
                       paymentStatus === 'Lunas'
                         ? 'border border-green-500/40 bg-green-500/10 text-green-500'
@@ -669,6 +675,24 @@ export default function Invoices() {
                       <p className="mt-1 truncate text-xs text-finance-500">
                         {bcaAccountNumber || 'Nomor belum diatur'}
                       </p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={paymentMethod === 'Lainnya'}
+                    onClick={() => setPaymentMethod('Lainnya')}
+                    className={`grid min-w-0 grid-cols-[112px_minmax(0,1fr)] items-center gap-3 rounded-lg border p-2.5 text-left transition-all active:brightness-95 ${
+                      paymentMethod === 'Lainnya'
+                        ? 'border-accent/60 bg-accent/10'
+                        : 'border-finance-200 bg-finance-50 hover:border-finance-300 hover:bg-finance-100'
+                    }`}
+                  >
+                    <div className="flex h-12 w-28 items-center justify-center rounded-md border border-finance-200 bg-finance-100 px-3 py-2 text-xs font-black tracking-wide text-accent">
+                      LAINNYA
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-finance-900">Metode Lainnya</p>
+                      <p className="mt-1 truncate text-xs text-finance-500">Tidak menggunakan rekening bank di atas</p>
                     </div>
                   </button>
                 </div>

@@ -97,7 +97,7 @@ export interface SellerInfo {
   bcaAccountHolder: string;
 }
 
-export type PaymentMethod = 'Mandiri' | 'BCA';
+export type PaymentMethod = 'Mandiri' | 'BCA' | 'Lainnya';
 
 export type UserRole = 'superadmin' | 'admin';
 

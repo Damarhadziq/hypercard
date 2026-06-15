@@ -11,7 +11,7 @@ import { useTransaction, useTransactionMutations } from '../hooks/useApiQueries'
 import { downloadInvoicePdf } from '../lib/invoicePdf';
 import type { UpdateTransactionStatusInput } from '../services/types';
 import { useStore, type PaymentMethod, type Transaction } from '../store/useStore';
-import { DetailPageSkeleton } from '../components/LoadingSkeleton';
+import { DetailPageSkeleton, TableSkeletonRows } from '../components/LoadingSkeleton';
 
 function getDetailCustomer(transaction: Transaction) {
   return {
@@ -33,7 +33,9 @@ export default function TransactionDetail() {
   const itemPagination = usePagination(transaction?.items ?? [], 10);
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(transaction?.paymentMethod ?? 'Mandiri');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(
+    transaction?.paymentMethod === 'BCA' ? 'BCA' : 'Mandiri',
+  );
 
   if (transactionQuery.isLoading) {
     return <DetailPageSkeleton />;
@@ -75,7 +77,7 @@ export default function TransactionDetail() {
 
   const handleStatusUpdate = async () => {
     if (nextStatus === 'Lunas') {
-      setSelectedPaymentMethod(transaction.paymentMethod ?? 'Mandiri');
+      setSelectedPaymentMethod(transaction.paymentMethod === 'BCA' ? 'BCA' : 'Mandiri');
       setShowPaymentModal(true);
       return;
     }
@@ -176,7 +178,9 @@ export default function TransactionDetail() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {itemPagination.paginatedItems.map((item) => {
+                  {itemPagination.isLoading ? (
+                    <TableSkeletonRows columns={4} rows={Math.min(itemPagination.pageSize, 10)} widths={['w-40', 'ml-auto w-24', 'ml-auto w-10', 'ml-auto w-28']} />
+                  ) : itemPagination.paginatedItems.map((item) => {
                     const productName = item.productName || 'Produk';
                     const productMeta = item.productCondition || item.productSetName || '-';
                     return (
@@ -199,6 +203,7 @@ export default function TransactionDetail() {
               pageSize={itemPagination.pageSize}
               totalItems={transaction.items.length}
               totalPages={itemPagination.totalPages}
+              isLoading={itemPagination.isLoading}
               onPageChange={itemPagination.setPage}
               onPageSizeChange={itemPagination.setPageSize}
             />

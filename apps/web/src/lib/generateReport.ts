@@ -222,6 +222,7 @@ export async function generateExcelReport(
   let profitTotal = 0;
   let bcaTotal = 0;
   let mandiriTotal = 0;
+  let otherPaymentTotal = 0;
   const sortedTransactions = [...filtered].sort((a, b) => (
     new Date(a.date).getTime() - new Date(b.date).getTime()
   ));
@@ -230,6 +231,7 @@ export async function generateExcelReport(
     const customer = getTransactionCustomer(trx, customers);
     if (trx.paymentMethod === 'BCA') bcaTotal += trx.total;
     if (trx.paymentMethod === 'Mandiri') mandiriTotal += trx.total;
+    if (!trx.paymentMethod || trx.paymentMethod === 'Lainnya') otherPaymentTotal += trx.total;
 
     for (const item of trx.items) {
       const product = productMap.get(item.productId);
@@ -246,7 +248,7 @@ export async function generateExcelReport(
         buyPrice || '',
         item.price,
         customer.name || trx.customerName || '-',
-        trx.paymentMethod || 'Tanpa metode',
+        trx.paymentMethod || 'Lainnya',
       ];
       row.height = 20;
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
@@ -294,6 +296,7 @@ export async function generateExcelReport(
   addSummaryBox('I2:J3', 'I4:J4', 'TOTAL KEUNTUNGAN', profitTotal);
   addSummaryBox('I6:J6', 'I7:J7', 'TOTAL BCA', bcaTotal);
   addSummaryBox('I9:J9', 'I10:J10', 'TOTAL MANDIRI', mandiriTotal);
+  addSummaryBox('I12:J12', 'I13:J13', 'TOTAL METODE LAIN', otherPaymentTotal);
 
   ws.eachRow((row) => {
     row.eachCell({ includeEmpty: true }, (cell) => {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Check, ChevronLeft, ChevronRight, LoaderCircle, Search, X } from 'lucide-react';
 import { Button, Input } from '@pokemon-finance/ui';
 import CleanSelect, { type CleanSelectOption } from './CleanSelect';
+import { Skeleton } from './LoadingSkeleton';
 import { FALLBACK_POKEMON_SETS, fetchPokemonSets, getSetLocalLabel, searchPokemonCards, type PokemonTcgCard, type PokemonTcgSet } from '../lib/pokemonTcg';
 
 interface PokemonCardPickerProps {
@@ -241,7 +242,15 @@ export default function PokemonCardPicker({
           </div>
 
           <div className="styled-scrollbar grid max-h-80 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
-            {results.map((card) => {
+            {isLoading ? (
+              Array.from({ length: 6 }, (_, index) => (
+                <div key={index} className="rounded-lg border border-finance-200 bg-finance-50 p-2" aria-hidden="true">
+                  <Skeleton className="aspect-[2.5/3.5] w-full" />
+                  <Skeleton className="mt-2 h-3.5 w-4/5" />
+                  <Skeleton className="mt-2 h-3 w-3/5" />
+                </div>
+              ))
+            ) : results.map((card) => {
               const isSelected = selectedCard?.id === card.id;
               return (
                 <button

@@ -25,6 +25,7 @@ export default function Admins() {
   const [pageSize, setPageSize] = useState(10);
   const adminsQuery = useAdmins({ page, limit: pageSize });
   const admins = adminsQuery.data?.data ?? [];
+  const isAdminListLoading = adminsQuery.isLoading || adminsQuery.isFetching;
   const totalItems = adminsQuery.data?.pagination.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const { createAdmin, deleteAdmin, updateAdminPassword, toggleAdminStatus } = useAdminMutations();
@@ -174,7 +175,7 @@ export default function Admins() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {adminsQuery.isLoading ? (
+                {isAdminListLoading ? (
                   <TableSkeletonRows columns={6} rows={6} widths={['w-40', 'w-20', 'w-20', 'w-32', 'w-56', 'ml-auto w-24']} />
                 ) : admins.map((admin) => (
                   <TableRow key={admin.id}>
@@ -244,6 +245,7 @@ export default function Admins() {
                 pageSize={pageSize}
                 totalItems={totalItems}
                 totalPages={totalPages}
+                isLoading={adminsQuery.isFetching}
                 onPageChange={setPage}
                 onPageSizeChange={(nextPageSize) => {
                   setPageSize(nextPageSize);

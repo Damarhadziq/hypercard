@@ -23,6 +23,7 @@ export default function Customers() {
     limit: pageSize,
   });
   const customers = customersQuery.data?.data ?? [];
+  const isCustomerListLoading = customersQuery.isLoading || customersQuery.isFetching;
   const totalItems = customersQuery.data?.pagination.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const { createCustomer, updateCustomer, deleteCustomer } = useCustomerMutations();
@@ -154,7 +155,7 @@ export default function Customers() {
         <CardHeader className="px-0 pb-4 pt-0 md:px-6 md:pt-6">
           <div className="flex items-center space-x-2">
             <div className="relative w-full sm:max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-finance-400" />
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-finance-400" />
               <Input 
                 placeholder="Cari nama atau nomor HP..." 
                 className="pl-9"
@@ -169,7 +170,7 @@ export default function Customers() {
         </CardHeader>
         <CardContent className="px-0 pb-0 md:px-6 md:pb-6">
           <div className="space-y-3 md:hidden">
-            {customersQuery.isLoading ? (
+            {isCustomerListLoading ? (
               <MobileListSkeleton />
             ) : customers.length === 0 ? (
               <div className="rounded-lg border border-dashed border-finance-200 py-10 text-center text-sm text-finance-500">
@@ -236,7 +237,7 @@ export default function Customers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customersQuery.isLoading ? (
+              {isCustomerListLoading ? (
                 <TableSkeletonRows columns={5} rows={6} widths={['w-32', 'w-28', 'w-full', 'w-36', 'ml-auto w-20']} />
               ) : customers.length === 0 ? (
                 <TableRow>
@@ -293,6 +294,7 @@ export default function Customers() {
               pageSize={pageSize}
               totalItems={totalItems}
               totalPages={totalPages}
+              isLoading={customersQuery.isFetching}
               onPageChange={setPage}
               onPageSizeChange={(nextPageSize) => {
                 setPageSize(nextPageSize);

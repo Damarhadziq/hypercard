@@ -46,7 +46,7 @@ const emptyManualTransaction = {
   sellPrice: 0,
   quantity: 1,
   status: 'Belum Dibayar' as 'Lunas' | 'Belum Dibayar',
-  paymentMethod: 'Mandiri' as PaymentMethod,
+  paymentMethod: 'Lainnya' as PaymentMethod,
 };
 
 type ManualTransactionForm = typeof emptyManualTransaction;
@@ -212,7 +212,15 @@ function ManualTransactionDrawer({
                     <label className="text-sm font-medium text-finance-700">Status</label>
                     <CleanSelect
                     value={form.status}
-                    onChange={(value) => onChange((current) => ({ ...current, status: value as 'Lunas' | 'Belum Dibayar' }))}
+                    onChange={(value) => onChange((current) => ({
+                      ...current,
+                      status: value as 'Lunas' | 'Belum Dibayar',
+                      paymentMethod: value === 'Lunas' && current.paymentMethod === 'Lainnya'
+                        ? 'Mandiri'
+                        : value === 'Belum Dibayar'
+                          ? 'Lainnya'
+                          : current.paymentMethod,
+                    }))}
                     options={[
                       { value: 'Belum Dibayar', label: 'Belum Dibayar' },
                       { value: 'Lunas', label: 'Lunas' },
@@ -286,6 +294,7 @@ export default function Transactions() {
     status: statusFilter,
   });
   const transactions = transactionsQuery.data?.data ?? EMPTY_TRANSACTIONS;
+  const isTransactionListLoading = transactionsQuery.isLoading || transactionsQuery.isFetching;
   const totalItems = transactionsQuery.data?.pagination.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const { updateTransactionStatus } = useTransactionMutations();
@@ -377,7 +386,7 @@ export default function Transactions() {
       || manualForm.quantity !== 1
       || manualForm.condition !== 'Near Mint'
       || manualForm.status !== 'Belum Dibayar'
-      || manualForm.paymentMethod !== 'Mandiri',
+      || manualForm.paymentMethod !== 'Lainnya',
   );
   const canCloseManualTransaction = async () => {
     if (!isManualFormDirty) return true;
@@ -514,7 +523,7 @@ export default function Transactions() {
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-finance-400" />
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-finance-400" />
               <Input 
                 placeholder="Cari no invoice atau nama pembeli..." 
                 className="pl-9"
@@ -549,7 +558,7 @@ export default function Transactions() {
         </CardHeader>
         <CardContent>
           <div className="md:hidden">
-            {transactionsQuery.isLoading ? (
+            {isTransactionListLoading ? (
               <MobileListSkeleton />
             ) : transactions.length === 0 ? (
               <p className="py-8 text-center text-sm text-finance-500">Tidak ada transaksi ditemukan.</p>
@@ -593,7 +602,7 @@ export default function Transactions() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactionsQuery.isLoading ? (
+                {isTransactionListLoading ? (
                   <TableSkeletonRows columns={6} rows={6} widths={['w-32', 'w-28', 'w-24', 'ml-auto w-24', 'w-28', 'ml-auto w-20']} />
                 ) : transactions.length === 0 ? (
                   <TableRow>
@@ -645,6 +654,7 @@ export default function Transactions() {
               pageSize={pageSize}
               totalItems={totalItems}
               totalPages={totalPages}
+              isLoading={transactionsQuery.isFetching}
               onPageChange={setPage}
               onPageSizeChange={(nextPageSize) => {
                 setPageSize(nextPageSize);

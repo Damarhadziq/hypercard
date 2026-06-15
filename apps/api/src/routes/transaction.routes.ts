@@ -28,7 +28,7 @@ const createTransactionSchema = z.object({
   shippingWeight: z.number().int().positive().optional(),
   shippingOrigin: z.string().optional(),
   shippingDestination: z.string().optional(),
-  paymentMethod: z.enum(['Mandiri', 'BCA']).default('Mandiri'),
+  paymentMethod: z.enum(['Mandiri', 'BCA', 'Lainnya']).default('Lainnya'),
   mandiriAccountNumber: z.string().optional(),
   mandiriAccountHolder: z.string().optional(),
   bcaAccountNumber: z.string().optional(),
@@ -39,7 +39,7 @@ const createTransactionSchema = z.object({
 
 const updateStatusSchema = z.object({
   status: z.enum(['Lunas', 'Belum Dibayar']),
-  paymentMethod: z.enum(['Mandiri', 'BCA']).optional(),
+  paymentMethod: z.enum(['Mandiri', 'BCA', 'Lainnya']).optional(),
   mandiriAccountNumber: z.string().optional(),
   mandiriAccountHolder: z.string().optional(),
   bcaAccountNumber: z.string().optional(),

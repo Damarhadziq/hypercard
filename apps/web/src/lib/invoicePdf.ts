@@ -215,7 +215,7 @@ export async function downloadInvoicePdf({
       );
 
       if (transaction.status === 'Lunas') {
-        const paymentMethod = transaction.paymentMethod || 'Mandiri';
+        const paymentMethod = transaction.paymentMethod || 'Lainnya';
         summaryRows.push({ label: 'METODE PEMBAYARAN', value: paymentMethod });
       }
 
@@ -229,10 +229,12 @@ export async function downloadInvoicePdf({
         y += 9;
       });
 
-      const paymentMethod = transaction.paymentMethod || 'Mandiri';
+      const paymentMethod = transaction.paymentMethod || 'Lainnya';
       const accountNumber = paymentMethod === 'BCA'
         ? transaction.bcaAccountNumber ?? sellerInfo.bcaAccountNumber
-        : transaction.mandiriAccountNumber ?? sellerInfo.bankAccountNumber;
+        : paymentMethod === 'Mandiri'
+          ? transaction.mandiriAccountNumber ?? sellerInfo.bankAccountNumber
+          : '';
       const boxGap = 6;
       const boxWidth = (PAGE_WIDTH - (MARGIN * 2) - boxGap) / 2;
 
@@ -248,7 +250,11 @@ export async function downloadInvoicePdf({
       setText(7, MUTED, 'bold');
       pdf.text('NO. REKENING', MARGIN + 4, y + 25);
       setText(8.5, DARK_TEXT, 'bold');
-      pdf.text(accountNumber || 'Nomor belum diatur', MARGIN + 32, y + 25);
+      pdf.text(
+        paymentMethod === 'Lainnya' ? 'Tidak menggunakan rekening bank' : accountNumber || 'Nomor belum diatur',
+        MARGIN + 32,
+        y + 25,
+      );
 
       const rulesX = MARGIN + boxWidth + boxGap + 4;
       setText(8, DARK_TEXT, 'bold');

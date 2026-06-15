@@ -9,6 +9,7 @@ interface PaginationProps {
   pageSize: number;
   totalItems: number;
   totalPages: number;
+  isLoading?: boolean;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }
@@ -18,6 +19,7 @@ export default function Pagination({
   pageSize,
   totalItems,
   totalPages,
+  isLoading = false,
   onPageChange,
   onPageSizeChange,
 }: PaginationProps) {
@@ -52,15 +54,19 @@ export default function Pagination({
   }, [isPageSizeOpen]);
 
   return (
-    <div className="flex flex-col gap-3 border-t border-finance-100 px-1 pt-4 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      className="flex flex-col gap-3 border-t border-finance-100 px-1 pt-4 sm:flex-row sm:items-center sm:justify-between"
+      aria-busy={isLoading}
+    >
       <div className="flex items-center gap-2 text-sm text-finance-500">
         <span>Tampilkan</span>
         <div className="relative">
           <button
             ref={pageSizeButtonRef}
             type="button"
+            disabled={isLoading}
             onClick={() => setIsPageSizeOpen((value) => !value)}
-            className="dropdown-trigger flex h-9 min-w-[70px] items-center justify-between gap-2 rounded-md border border-finance-200 bg-white px-3 text-sm font-semibold text-finance-900 transition-colors hover:border-finance-300 focus:outline-none"
+            className="dropdown-trigger flex h-9 min-w-[70px] items-center justify-between gap-2 rounded-md border border-finance-200 bg-white px-3 text-sm font-semibold text-finance-900 transition-colors hover:border-finance-300 focus:outline-none disabled:cursor-wait disabled:opacity-50"
             aria-haspopup="listbox"
             aria-expanded={isPageSizeOpen}
             aria-label="Jumlah data per halaman"
@@ -116,7 +122,7 @@ export default function Pagination({
           <div className="flex items-center gap-1">
             <button
               type="button"
-              disabled={page <= 1}
+              disabled={isLoading || page <= 1}
               onClick={() => onPageChange(page - 1)}
               className="flex h-9 w-9 items-center justify-center rounded-md border border-finance-200 text-finance-600 hover:bg-finance-50 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Halaman sebelumnya"
@@ -128,7 +134,7 @@ export default function Pagination({
             </span>
             <button
               type="button"
-              disabled={page >= totalPages}
+              disabled={isLoading || page >= totalPages}
               onClick={() => onPageChange(page + 1)}
               className="flex h-9 w-9 items-center justify-center rounded-md border border-finance-200 text-finance-600 hover:bg-finance-50 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Halaman berikutnya"

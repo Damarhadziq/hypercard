@@ -220,7 +220,7 @@ function InvoiceItems({
 }
 
 function InvoiceSummary({ transaction, sellerInfo }: { transaction: Transaction; sellerInfo: SellerInfo }) {
-  const selectedMethod = transaction.paymentMethod || 'Mandiri';
+  const selectedMethod = transaction.paymentMethod || 'Lainnya';
   const paymentAccounts = [
     {
       method: 'Mandiri',
@@ -232,8 +232,13 @@ function InvoiceSummary({ transaction, sellerInfo }: { transaction: Transaction;
       number: transaction.bcaAccountNumber ?? sellerInfo.bcaAccountNumber,
       holder: transaction.bcaAccountHolder ?? sellerInfo.bcaAccountHolder,
     },
+    {
+      method: 'Lainnya',
+      number: '',
+      holder: '',
+    },
   ] as const;
-  const selectedAccount = paymentAccounts.find((account) => account.method === selectedMethod) ?? paymentAccounts[0];
+  const selectedAccount = paymentAccounts.find((account) => account.method === selectedMethod) ?? paymentAccounts[2];
 
   return (
     <>
@@ -271,7 +276,9 @@ function InvoiceSummary({ transaction, sellerInfo }: { transaction: Transaction;
           <p className="mt-2 text-[8px] font-bold text-[#777]">BANK</p>
           <p className="text-[10px] font-black text-[#111]">{selectedAccount.method}</p>
           <p className="mt-1 text-[8px] font-bold text-[#777]">NO. REKENING</p>
-          <p className="text-[10px] font-black text-[#111]">{selectedAccount.number || 'Nomor belum diatur'}</p>
+          <p className="text-[10px] font-black text-[#111]">
+            {selectedMethod === 'Lainnya' ? 'Tidak menggunakan rekening bank' : selectedAccount.number || 'Nomor belum diatur'}
+          </p>
         </div>
         <div className="invoice-info-box">
           <p className="font-black">PERATURAN PEMBAYARAN</p>

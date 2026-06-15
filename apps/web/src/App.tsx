@@ -18,7 +18,9 @@ const InvoicePrintPage = React.lazy(() => import('./pages/InvoicePrintPage'));
 const Admins = React.lazy(() => import('./pages/Admins'));
 const Login = React.lazy(() => import('./pages/Login'));
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+const IDLE_TIMEOUT_MINUTES = IDLE_TIMEOUT_MS / 60_000;
 const LAST_ACTIVITY_KEY = 'hypercard:last-activity';
+const SESSION_NOTICE_KEY = 'hypercard:session-notice';
 
 function AppLoader({
   fullScreen = false,
@@ -411,10 +413,17 @@ function App() {
     session && persistedActivity && appStartedAt - persistedActivity >= IDLE_TIMEOUT_MS,
   );
   const [isOpeningAdmin, setIsOpeningAdmin] = React.useState(false);
+  const [sessionNotice, setSessionNotice] = React.useState(() => {
+    const notice = window.sessionStorage.getItem(SESSION_NOTICE_KEY) ?? '';
+    window.sessionStorage.removeItem(SESSION_NOTICE_KEY);
+    return notice;
+  });
   const openingTimerRef = React.useRef<number | null>(null);
 
   const handleLogin = (authenticatedSession: Session) => {
     window.localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+    window.sessionStorage.removeItem(SESSION_NOTICE_KEY);
+    setSessionNotice('');
     setIsOpeningAdmin(true);
     queryClient.setQueryData(queryKeys.authSession, authenticatedSession);
     window.history.replaceState(null, '', '/');
@@ -436,6 +445,13 @@ function App() {
     await signOut.mutateAsync();
   }, [signOut]);
 
+  const handleSessionExpired = React.useCallback(() => {
+    const notice = `Sesi berakhir karena tidak ada aktivitas selama ${IDLE_TIMEOUT_MINUTES} menit. Silakan masuk kembali.`;
+    window.sessionStorage.setItem(SESSION_NOTICE_KEY, notice);
+    setSessionNotice(notice);
+    void handleLogout();
+  }, [handleLogout]);
+
   React.useEffect(() => {
     if (!session) return;
 
@@ -447,7 +463,7 @@ function App() {
       const remaining = IDLE_TIMEOUT_MS - (Date.now() - lastActivity);
       window.clearTimeout(timeoutId);
       if (remaining <= 0) {
-        void handleLogout();
+        handleSessionExpired();
         return;
       }
       timeoutId = window.setTimeout(logoutWhenIdle, remaining);
@@ -470,15 +486,15 @@ function App() {
     const events: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'scroll', 'touchstart'];
     events.forEach((event) => window.addEventListener(event, recordActivity, { passive: true }));
     window.addEventListener('focus', logoutWhenIdle);
-    window.addEventListener('hypercard:session-expired', handleLogout);
+    window.addEventListener('hypercard:session-expired', handleSessionExpired);
 
     return () => {
       window.clearTimeout(timeoutId);
       events.forEach((event) => window.removeEventListener(event, recordActivity));
       window.removeEventListener('focus', logoutWhenIdle);
-      window.removeEventListener('hypercard:session-expired', handleLogout);
+      window.removeEventListener('hypercard:session-expired', handleSessionExpired);
     };
-  }, [handleLogout, session]);
+  }, [handleSessionExpired, session]);
 
   React.useEffect(() => () => {
     if (openingTimerRef.current) {
@@ -501,7 +517,11 @@ function App() {
   if (!session) {
     return (
       <React.Suspense fallback={<PageFallback />}>
-        <Login onLogin={handleLogin} />
+        <Login
+          onLogin={handleLogin}
+          sessionNotice={sessionNotice}
+          idleTimeoutMinutes={IDLE_TIMEOUT_MINUTES}
+        />
       </React.Suspense>
     );
   }

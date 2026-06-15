@@ -27,7 +27,7 @@ export interface CreateTransactionInput {
   shippingOrigin?: string;
   shippingDestination?: string;
   total: number;
-  paymentMethod?: 'Mandiri' | 'BCA';
+  paymentMethod?: 'Mandiri' | 'BCA' | 'Lainnya';
   mandiriAccountNumber?: string;
   mandiriAccountHolder?: string;
   bcaAccountNumber?: string;
@@ -259,7 +259,7 @@ export const transactionService = {
           shippingDestination: input.shippingDestination,
           total: input.total,
           status: 'Belum Dibayar',
-          paymentMethod: input.paymentMethod ?? 'Mandiri',
+          paymentMethod: input.paymentMethod ?? 'Lainnya',
           mandiriAccountNumber: input.mandiriAccountNumber,
           mandiriAccountHolder: input.mandiriAccountHolder,
           bcaAccountNumber: input.bcaAccountNumber,
@@ -307,22 +307,24 @@ export const transactionService = {
     id: string,
     input: {
       status: 'Lunas' | 'Belum Dibayar';
-      paymentMethod?: 'Mandiri' | 'BCA';
+      paymentMethod?: 'Mandiri' | 'BCA' | 'Lainnya';
       mandiriAccountNumber?: string;
       mandiriAccountHolder?: string;
       bcaAccountNumber?: string;
       bcaAccountHolder?: string;
     },
   ) {
-    const paymentFields = input.status === 'Lunas' && input.paymentMethod
-      ? {
+    const paymentFields = input.status === 'Belum Dibayar'
+      ? { paymentMethod: 'Lainnya' }
+      : input.paymentMethod
+        ? {
           paymentMethod: input.paymentMethod,
           mandiriAccountNumber: input.mandiriAccountNumber,
           mandiriAccountHolder: input.mandiriAccountHolder,
           bcaAccountNumber: input.bcaAccountNumber,
           bcaAccountHolder: input.bcaAccountHolder,
         }
-      : {};
+        : { paymentMethod: 'Lainnya' };
 
     const result = await db
       .update(transactions)

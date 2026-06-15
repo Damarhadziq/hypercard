@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input } from '@pokemon-finance/ui';
-import { Eye, EyeOff } from 'lucide-react';
+import { Clock3, Eye, EyeOff, Info } from 'lucide-react';
 import type { AdminUser } from '../store/useStore';
 import { useSignIn } from '../hooks/useApiQueries';
 
@@ -9,9 +9,11 @@ export type Session = Pick<AdminUser, 'id' | 'name' | 'email' | 'role'>;
 
 interface LoginProps {
   onLogin: (session: Session) => void;
+  sessionNotice?: string;
+  idleTimeoutMinutes: number;
 }
 
-export default function Login({ onLogin }: LoginProps) {
+export default function Login({ onLogin, sessionNotice = '', idleTimeoutMinutes }: LoginProps) {
   const signIn = useSignIn();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -86,6 +88,13 @@ export default function Login({ onLogin }: LoginProps) {
         </div>
       </div>
 
+      {sessionNotice && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2.5 text-sm text-[#f0d27b]" role="status">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <p className="leading-5">{sessionNotice}</p>
+        </div>
+      )}
+
       {error && <p className="text-sm font-medium text-red-500">{error}</p>}
 
       <Button
@@ -95,6 +104,11 @@ export default function Login({ onLogin }: LoginProps) {
       >
         {signIn.isPending ? 'Memproses...' : 'Masuk'}
       </Button>
+
+      <div className="flex items-start justify-center gap-2 text-center text-xs leading-5 text-finance-500">
+        <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <p>Otomatis logout setelah {idleTimeoutMinutes} menit tanpa aktivitas.</p>
+      </div>
     </form>
   );
 

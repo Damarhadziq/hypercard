@@ -727,7 +727,7 @@ export default function Reports() {
   };
 
   const isLoading = reportSummaryQuery.isLoading;
-  const isTableLoading = isLoading || reportItemsQuery.isLoading;
+  const isTableLoading = isLoading || reportItemsQuery.isLoading || reportItemsQuery.isFetching;
 
   return (
     <div className="animate-soft-in space-y-6">
@@ -915,12 +915,13 @@ export default function Reports() {
             </Table>
           </div>
 
-          {!isTableLoading && (
+          {!isLoading && !reportItemsQuery.isLoading && (
             <Pagination
               page={page}
               pageSize={pageSize}
               totalItems={paginatedTotalItems}
               totalPages={paginatedTotalPages}
+              isLoading={reportItemsQuery.isFetching}
               onPageChange={setPage}
               onPageSizeChange={(nextPageSize) => {
                 setPageSize(nextPageSize);

@@ -328,7 +328,7 @@ export default function Products() {
 
       <div className="flex flex-col gap-3 border-b border-finance-100 pb-4 md:pb-5 md:flex-row md:items-center md:justify-between">
         <div className="relative w-full md:max-w-md">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-finance-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-finance-400" />
           <Input
             placeholder="Cari nama, set, rarity, nomor kartu..."
             className="h-11 pl-10"

@@ -104,7 +104,7 @@ export default function PaymentStatusModal({
         <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Button
             variant="outline"
-            onClick={() => onConfirm({ status: 'Lunas' })}
+            onClick={() => onConfirm({ status: 'Lunas', paymentMethod: 'Lainnya' })}
             disabled={isSubmitting}
             className="h-auto min-h-10 whitespace-normal px-3 py-2 text-center leading-5"
           >
