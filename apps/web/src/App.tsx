@@ -65,7 +65,15 @@ function PageFallback() {
   return <AppLoader />;
 }
 
-function SidebarTooltip({ label, children }: { label: string; children: React.ReactNode }) {
+function SidebarTooltip({
+  label,
+  children,
+  triggerClassName = 'inline-flex',
+}: {
+  label: string;
+  children: React.ReactNode;
+  triggerClassName?: string;
+}) {
   const triggerRef = React.useRef<HTMLSpanElement>(null);
   const [position, setPosition] = React.useState<{ left: number; top: number } | null>(null);
   const tooltipId = React.useId();
@@ -83,7 +91,7 @@ function SidebarTooltip({ label, children }: { label: string; children: React.Re
     <>
       <span
         ref={triggerRef}
-        className="flex w-full"
+        className={triggerClassName}
         aria-describedby={position ? tooltipId : undefined}
         onMouseEnter={showTooltip}
         onMouseLeave={() => setPosition(null)}
@@ -145,8 +153,8 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
   return (
     <div className="premium-dark flex h-screen min-h-0 w-full max-w-full overflow-hidden bg-[#070708] font-sans text-finance-900">
       {/* Sidebar */}
-      <aside className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} relative hidden h-screen shrink-0 flex-col overflow-hidden border-r border-finance-200 bg-white transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] md:flex`}>
-        <div className={`${isSidebarCollapsed ? 'justify-center px-4' : 'justify-between px-6'} relative z-10 flex h-16 items-center border-b border-finance-100 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}>
+      <aside className={`${isSidebarCollapsed ? 'w-[88px]' : 'w-64'} relative hidden h-screen shrink-0 flex-col overflow-hidden border-r border-finance-200 bg-[#0c0c0f] transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] md:flex`}>
+        <div className={`${isSidebarCollapsed ? 'justify-center px-3' : 'justify-between px-6'} relative z-10 flex h-16 shrink-0 items-center border-b border-finance-100 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}>
           {isSidebarCollapsed ? (
             <SidebarTooltip label="Perluas sidebar">
               <button
@@ -160,8 +168,8 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
             </SidebarTooltip>
           ) : (
             <>
-              <div className="flex min-w-0 flex-1 items-center">
-                <h1 className="font-brand truncate text-xl font-semibold">Hypercard</h1>
+              <div className="flex min-w-0 items-center">
+                <h1 className="font-brand whitespace-nowrap text-xl font-semibold text-white">Hypercard</h1>
               </div>
               <SidebarTooltip label="Minimalkan sidebar">
                 <button
@@ -176,7 +184,7 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
             </>
           )}
         </div>
-        <nav className="relative z-10 flex-1 space-y-1 p-4">
+        <nav className="relative z-10 flex min-h-0 flex-1 flex-col gap-1.5 px-4 py-4">
           <NavItem to="/" icon={<Home size={20} />} label="Dashboard" active={currentPath === '/'} collapsed={isSidebarCollapsed} />
           <NavItem to="/products" icon={<ShoppingBag size={20} />} label="Produk" count={productCount} active={currentPath.startsWith('/products')} collapsed={isSidebarCollapsed} />
           <NavItem to="/customers" icon={<Users size={20} />} label="Pembeli" count={customerCount} active={currentPath.startsWith('/customers')} collapsed={isSidebarCollapsed} />
@@ -187,8 +195,8 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
             <NavItem to="/admins" icon={<UserCog size={20} />} label="Admin" active={currentPath.startsWith('/admins')} collapsed={isSidebarCollapsed} />
           )}
         </nav>
-        <div className={`${isSidebarCollapsed ? 'px-3' : 'px-6'} relative z-10 border-t border-finance-200 py-3 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}>
-          <div className={`flex min-h-8 items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between gap-3'}`}>
+        <div className={`${isSidebarCollapsed ? 'px-4' : 'px-6'} relative z-10 shrink-0 border-t border-finance-200 py-3 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}>
+          <div className={`flex h-9 items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between gap-3'}`}>
             {!isSidebarCollapsed && (
               <p className="text-[11px] font-medium leading-relaxed text-finance-500">
                 © 2026 dmrhdz.iq
@@ -197,7 +205,7 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
             <img
               src="/hypercard-footer-logo.svg"
               alt="Hypercard"
-              className={`${isSidebarCollapsed ? 'h-8 w-8' : 'h-7 w-7'} shrink-0 object-contain`}
+              className={`${isSidebarCollapsed ? 'h-9 w-9' : 'h-8 w-8'} shrink-0 object-contain`}
             />
           </div>
         </div>
@@ -316,7 +324,8 @@ function NavItem({
   const navLink = (
     <Link
       to={to}
-      className={`sidebar-nav-item group relative flex h-11 items-center overflow-hidden rounded-lg border py-2.5 text-sm font-medium transition-[background-color,border-color,color,box-shadow,padding] duration-200 ease-out active:brightness-95 ${collapsed ? 'justify-center px-0' : 'justify-start px-3'} ${
+      aria-label={collapsed ? `${label}${hasCount ? `, ${count}` : ''}` : undefined}
+      className={`sidebar-nav-item group relative flex h-12 w-full shrink-0 items-center rounded-lg border text-sm font-medium transition-[background-color,border-color,color,box-shadow,padding] duration-200 ease-out active:brightness-95 ${collapsed ? 'justify-center px-0' : 'justify-start px-3'} ${
         active 
           ? 'border-accent/45 bg-[linear-gradient(90deg,rgba(214,180,93,0.18),rgba(220,38,38,0.07)_58%,rgba(20,20,23,0.72))] text-accent shadow-[inset_3px_0_0_#d6b45d,0_10px_28px_rgba(0,0,0,0.16)]' 
           : 'border-transparent text-finance-500 hover:border-accent/20 hover:bg-finance-50 hover:text-accent'
@@ -330,7 +339,7 @@ function NavItem({
       </span>
       {hasCount && (
         <span
-          className={`${collapsed ? 'absolute right-1.5 top-1 min-w-4 px-1 text-[9px]' : 'ml-2 min-w-6 px-2 text-[10px]'} flex h-5 shrink-0 items-center justify-center rounded-full border border-accent/35 bg-[#0c0c0f] font-bold tabular-nums text-accent transition-all duration-200`}
+          className={`${collapsed ? 'absolute right-1 top-1 min-w-[18px] px-1 text-[9px]' : 'ml-2 min-w-6 px-2 text-[10px]'} flex h-[18px] shrink-0 items-center justify-center rounded-full border border-accent/35 bg-[#0c0c0f] font-bold tabular-nums text-accent transition-all duration-200`}
           aria-label={`${count} ${label.toLowerCase()}`}
         >
           {formatSidebarCount(count)}
@@ -342,7 +351,10 @@ function NavItem({
   if (!collapsed) return navLink;
 
   return (
-    <SidebarTooltip label={`${label}${hasCount ? ` · ${formatSidebarCount(count)}` : ''}`}>
+    <SidebarTooltip
+      label={`${label}${hasCount ? ` · ${formatSidebarCount(count)}` : ''}`}
+      triggerClassName="block w-full"
+    >
       {navLink}
     </SidebarTooltip>
   );
