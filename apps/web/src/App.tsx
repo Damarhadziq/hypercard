@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { BarChart3, Home, MoreHorizontal, PanelLeftClose, PanelLeftOpen, ShoppingBag, Users, FileText, CreditCard, LogOut, UserCog } from 'lucide-react';
@@ -64,6 +65,50 @@ function PageFallback() {
   return <AppLoader />;
 }
 
+function SidebarTooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  const triggerRef = React.useRef<HTMLSpanElement>(null);
+  const [position, setPosition] = React.useState<{ left: number; top: number } | null>(null);
+  const tooltipId = React.useId();
+
+  const showTooltip = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setPosition({
+      left: rect.right + 10,
+      top: rect.top + rect.height / 2,
+    });
+  };
+
+  return (
+    <>
+      <span
+        ref={triggerRef}
+        className="inline-flex"
+        aria-describedby={position ? tooltipId : undefined}
+        onMouseEnter={showTooltip}
+        onMouseLeave={() => setPosition(null)}
+        onFocus={showTooltip}
+        onBlur={() => setPosition(null)}
+      >
+        {children}
+      </span>
+      {position && typeof document !== 'undefined' && createPortal(
+        <div
+          id={tooltipId}
+          role="tooltip"
+          className="pointer-events-none fixed z-[1500] -translate-y-1/2 animate-fade-in whitespace-nowrap rounded-md border border-finance-200 bg-[#171719] px-3 py-1.5 text-xs font-medium text-white shadow-lg shadow-black/35"
+          style={{ left: position.left, top: position.top }}
+        >
+          <span className="absolute right-full top-1/2 -translate-y-1/2 border-y-[5px] border-r-[6px] border-y-transparent border-r-finance-200" />
+          <span className="absolute right-[calc(100%-1px)] top-1/2 -translate-y-1/2 border-y-4 border-r-[5px] border-y-transparent border-r-[#171719]" />
+          {label}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
 function AppLayout({ children, session, onLogout }: { children: React.ReactNode; session: Session; onLogout: () => void }) {
   const location = useLocation();
   const currentPath = location.pathname;
@@ -103,27 +148,31 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
       <aside className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} relative hidden h-screen shrink-0 flex-col overflow-hidden border-r border-finance-200 bg-white transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] md:flex`}>
         <div className={`${isSidebarCollapsed ? 'justify-center px-4' : 'justify-between px-6'} relative z-10 flex h-16 items-center border-b border-finance-100 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}>
           {isSidebarCollapsed ? (
-            <button
-              type="button"
-              onClick={() => toggleSidebar(false)}
-              className="interactive-click flex h-10 w-10 items-center justify-center rounded-lg text-finance-500 transition-colors hover:bg-finance-100 hover:text-finance-900"
-              aria-label="Expand sidebar"
-            >
-              <PanelLeftOpen size={20} />
-            </button>
+            <SidebarTooltip label="Perluas sidebar">
+              <button
+                type="button"
+                onClick={() => toggleSidebar(false)}
+                className="interactive-click flex h-10 w-10 items-center justify-center rounded-lg text-finance-500 transition-colors hover:bg-finance-100 hover:text-finance-900"
+                aria-label="Perluas sidebar"
+              >
+                <PanelLeftOpen size={20} />
+              </button>
+            </SidebarTooltip>
           ) : (
             <>
               <div className="flex min-w-0 flex-1 items-center">
                 <h1 className="font-brand truncate text-xl font-semibold">Hypercard</h1>
               </div>
-            <button
-              type="button"
-              onClick={() => toggleSidebar(true)}
-              className="interactive-click flex h-9 w-9 items-center justify-center rounded-md text-finance-500 transition-colors hover:bg-finance-100 hover:text-finance-900"
-              aria-label="Minimize sidebar"
-            >
-              <PanelLeftClose size={18} />
-            </button>
+              <SidebarTooltip label="Minimalkan sidebar">
+                <button
+                  type="button"
+                  onClick={() => toggleSidebar(true)}
+                  className="interactive-click flex h-9 w-9 items-center justify-center rounded-md text-finance-500 transition-colors hover:bg-finance-100 hover:text-finance-900"
+                  aria-label="Minimalkan sidebar"
+                >
+                  <PanelLeftClose size={18} />
+                </button>
+              </SidebarTooltip>
             </>
           )}
         </div>
