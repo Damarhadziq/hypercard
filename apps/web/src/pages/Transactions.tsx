@@ -499,14 +499,14 @@ export default function Transactions() {
         />
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-finance-950">Daftar Transaksi</h1>
           <p className="text-sm text-finance-500 mt-1">Pantau semua transaksi dan status pembayaran pelanggan.</p>
         </div>
-        <Button onClick={openManualTransactionModal} className="gap-2">
+        <Button onClick={openManualTransactionModal} className="flex w-full items-center justify-center gap-2 sm:w-auto">
           <PlusCircle size={16} />
-          Tambah Transaksi
+          <span>Tambah Transaksi</span>
         </Button>
       </div>
 
