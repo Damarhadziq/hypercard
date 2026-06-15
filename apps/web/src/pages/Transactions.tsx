@@ -66,6 +66,47 @@ const transactionStatusOptions: Array<{ value: TransactionStatusFilter; label: s
   { value: 'Belum Dibayar', label: 'Belum Dibayar' },
 ];
 
+function SkeletonBar({ className = '' }: { className?: string }) {
+  return <div className={`animate-pulse rounded-md bg-finance-100 ${className}`} aria-hidden="true" />;
+}
+
+function MobileTransactionSkeleton() {
+  return (
+    <div className="divide-y divide-finance-100" aria-hidden="true">
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index} className="grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_auto] items-center gap-3 py-4">
+          <div className="space-y-2">
+            <SkeletonBar className="h-2.5 w-16" />
+            <SkeletonBar className="h-4 w-28 max-w-full" />
+          </div>
+          <div className="space-y-2">
+            <SkeletonBar className="h-2.5 w-10" />
+            <SkeletonBar className="h-4 w-20 max-w-full" />
+          </div>
+          <SkeletonBar className="h-8 w-20" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DesktopTransactionSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 5 }, (_, index) => (
+        <TableRow key={index} aria-hidden="true">
+          <TableCell><SkeletonBar className="h-4 w-32" /></TableCell>
+          <TableCell><SkeletonBar className="h-4 w-28" /></TableCell>
+          <TableCell><SkeletonBar className="h-4 w-24" /></TableCell>
+          <TableCell><SkeletonBar className="ml-auto h-4 w-24" /></TableCell>
+          <TableCell><SkeletonBar className="h-8 w-28 rounded-lg" /></TableCell>
+          <TableCell><SkeletonBar className="ml-auto h-8 w-20" /></TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
 function ManualTransactionDrawer({
   form,
   customers,
@@ -548,9 +589,9 @@ export default function Transactions() {
         </CardHeader>
         <CardContent>
           <div className="md:hidden">
-              {transactionsQuery.isLoading ? (
-                <p className="py-8 text-center text-sm text-finance-500">Memuat transaksi...</p>
-              ) : transactions.length === 0 ? (
+            {transactionsQuery.isLoading ? (
+              <MobileTransactionSkeleton />
+            ) : transactions.length === 0 ? (
               <p className="py-8 text-center text-sm text-finance-500">Tidak ada transaksi ditemukan.</p>
             ) : (
               <div className="divide-y divide-finance-100">
@@ -593,11 +634,7 @@ export default function Transactions() {
               </TableHeader>
               <TableBody>
                 {transactionsQuery.isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-finance-500">
-                      Memuat transaksi...
-                    </TableCell>
-                  </TableRow>
+                  <DesktopTransactionSkeleton />
                 ) : transactions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="py-8 text-center text-finance-500">
@@ -642,17 +679,19 @@ export default function Transactions() {
               </TableBody>
             </Table>
           </div>
-          <Pagination
-            page={page}
-            pageSize={pageSize}
-            totalItems={totalItems}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            onPageSizeChange={(nextPageSize) => {
-              setPageSize(nextPageSize);
-              setPage(1);
-            }}
-          />
+          {!transactionsQuery.isLoading && (
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
