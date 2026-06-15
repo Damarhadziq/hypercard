@@ -550,7 +550,7 @@ function ReportChart({
         ) : (
           <div className="min-w-0 flex-1">
             <ResponsiveContainer width="100%" height={280} minWidth={0} debounce={180}>
-              <AreaChart data={data} margin={{ top: 8, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart data={data} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
                 <defs>
                   <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={color} stopOpacity={0.28} />
@@ -570,11 +570,12 @@ function ReportChart({
                   tickFormatter={(value: number) => formatChartDateTick(value, data)}
                 />
                 <YAxis
-                  width={66}
+                  width={54}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: '#8f9299' }}
                   tickFormatter={formatChartAxisValue}
+                  dx={-2}
                 />
                 <Tooltip
                   cursor={{ stroke: 'rgba(214,180,93,0.55)', strokeWidth: 1 }}
