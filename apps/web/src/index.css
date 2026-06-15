@@ -304,10 +304,10 @@
 
   @keyframes login-button-shimmer {
     0% {
-      background-position: 120% 50%;
+      transform: translateX(-260%) skewX(-18deg);
     }
     100% {
-      background-position: -120% 50%;
+      transform: translateX(460%) skewX(-18deg);
     }
   }
 
@@ -315,30 +315,66 @@
     position: relative;
     isolation: isolate;
     overflow: hidden;
+    transition:
+      background 280ms ease,
+      border-color 280ms ease,
+      color 220ms ease,
+      box-shadow 280ms ease,
+      opacity 220ms ease,
+      transform 180ms ease !important;
+  }
+
+  .login-submit-button > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .login-submit-button::after {
+    position: absolute;
+    z-index: 1;
+    top: -30%;
+    bottom: -30%;
+    left: 0;
+    width: 32%;
+    content: '';
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(214, 180, 93, 0.06) 20%,
+      rgba(255, 239, 174, 0.62) 50%,
+      rgba(214, 180, 93, 0.06) 80%,
+      transparent 100%
+    );
+    transform: translateX(-260%) skewX(-18deg);
+    transition: opacity 220ms ease;
   }
 
   .login-submit-button-active {
     border-color: rgba(214, 180, 93, 0.72) !important;
     background: linear-gradient(
       105deg,
-      rgba(43, 31, 20, 0.98) 0%,
-      rgba(82, 57, 24, 0.96) 38%,
-      rgba(240, 210, 123, 0.72) 50%,
-      rgba(82, 57, 24, 0.96) 62%,
-      rgba(43, 31, 20, 0.98) 100%
+      rgba(44, 31, 19, 0.98),
+      rgba(91, 62, 24, 0.96),
+      rgba(44, 31, 19, 0.98)
     ) !important;
-    background-size: 250% 100% !important;
     color: #f0d27b !important;
     box-shadow:
       0 10px 28px rgba(0, 0, 0, 0.28),
       0 0 18px rgba(214, 180, 93, 0.08) !important;
+  }
+
+  .login-submit-button-active::after {
+    opacity: 1;
     animation: login-button-shimmer 2.2s linear infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .login-submit-button-active {
+    .login-submit-button-active::after {
       animation: none;
-      background-position: center !important;
+      opacity: 0.18;
+      transform: translateX(110%) skewX(-18deg);
     }
   }
 
