@@ -313,10 +313,9 @@ function NavItem({
 }) {
   const hasCount = typeof count === 'number' && count > 0;
 
-  return (
+  const navLink = (
     <Link
       to={to}
-      title={collapsed ? `${label}${hasCount ? ` (${count})` : ''}` : undefined}
       className={`sidebar-nav-item group relative flex h-11 items-center overflow-hidden rounded-lg border py-2.5 text-sm font-medium transition-[background-color,border-color,color,box-shadow,padding] duration-200 ease-out active:brightness-95 ${collapsed ? 'justify-center px-0' : 'justify-start px-3'} ${
         active 
           ? 'border-accent/45 bg-[linear-gradient(90deg,rgba(214,180,93,0.18),rgba(220,38,38,0.07)_58%,rgba(20,20,23,0.72))] text-accent shadow-[inset_3px_0_0_#d6b45d,0_10px_28px_rgba(0,0,0,0.16)]' 
@@ -338,6 +337,14 @@ function NavItem({
         </span>
       )}
     </Link>
+  );
+
+  if (!collapsed) return navLink;
+
+  return (
+    <SidebarTooltip label={`${label}${hasCount ? ` · ${formatSidebarCount(count)}` : ''}`}>
+      {navLink}
+    </SidebarTooltip>
   );
 }
 
