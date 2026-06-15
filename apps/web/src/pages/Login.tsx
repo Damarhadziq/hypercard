@@ -17,6 +17,7 @@ export default function Login({ onLogin }: LoginProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const isFormComplete = Boolean(email.trim() && password.trim());
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -87,7 +88,11 @@ export default function Login({ onLogin }: LoginProps) {
 
       {error && <p className="text-sm font-medium text-primary">{error}</p>}
 
-      <Button type="submit" className="w-full" disabled={signIn.isPending}>
+      <Button
+        type="submit"
+        className={`login-submit-button w-full ${isFormComplete && !signIn.isPending ? 'login-submit-button-active' : ''}`}
+        disabled={!isFormComplete || signIn.isPending}
+      >
         {signIn.isPending ? 'Memproses...' : 'Masuk'}
       </Button>
     </form>
