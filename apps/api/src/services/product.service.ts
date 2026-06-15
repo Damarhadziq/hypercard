@@ -1,4 +1,4 @@
-import { eq, ilike, or, sql, desc } from 'drizzle-orm';
+import { and, desc, eq, gt, ilike, or, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { products, transactionItems } from '../db/schema.js';
 import { storageService } from './storage.service.js';
@@ -22,10 +22,10 @@ export interface CreateProductInput {
 export type UpdateProductInput = Partial<CreateProductInput>;
 
 export const productService = {
-  async getAll(search?: string, page = 1, limit = 50) {
+  async getAll(search?: string, page = 1, limit = 50, inStock = false) {
     const offset = (page - 1) * limit;
 
-    const conditions = search
+    const searchCondition = search
       ? or(
           ilike(products.name, `%${search}%`),
           ilike(products.category, `%${search}%`),
@@ -34,6 +34,10 @@ export const productService = {
           ilike(products.cardNumber, `%${search}%`)
         )
       : undefined;
+    const conditions = and(
+      inStock ? gt(products.stock, 0) : undefined,
+      searchCondition,
+    );
 
     const [data, countResult] = await Promise.all([
       db

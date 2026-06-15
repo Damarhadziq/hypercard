@@ -50,8 +50,9 @@ router.get('/', async (req, res) => {
   const search = req.query.search as string | undefined;
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 50;
+  const inStock = req.query.inStock === 'true';
 
-  const result = await productService.getAll(search, page, limit);
+  const result = await productService.getAll(search, page, limit, inStock);
   res.json(result);
 });
 

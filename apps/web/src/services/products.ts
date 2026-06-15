@@ -2,7 +2,7 @@ import { apiClient, type PaginatedResponse } from './apiClient';
 import type { Product, ProductInput, ProductUpdateInput } from './types';
 
 export const productsService = {
-  list(params: { search?: string; page?: number; limit?: number } = {}) {
+  list(params: { search?: string; page?: number; limit?: number; inStock?: boolean } = {}) {
     return apiClient<PaginatedResponse<Product>>('/products', { query: params });
   },
   detail(id: string) {

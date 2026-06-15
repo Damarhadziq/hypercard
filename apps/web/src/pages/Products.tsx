@@ -170,7 +170,7 @@ const ProductGridCard = memo(function ProductGridCard({
 });
 
 export default function Products() {
-  const productsQuery = useProducts({ limit: 1000 });
+  const productsQuery = useProducts({ limit: 1000, inStock: true });
   const products = productsQuery.data?.data ?? [];
   const { createProduct, updateProduct, deleteProduct } = useProductMutations();
   const [searchQuery, setSearchQuery] = useState('');

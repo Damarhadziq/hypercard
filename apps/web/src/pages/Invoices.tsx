@@ -239,7 +239,7 @@ function ProductDropdown({
 
 export default function Invoices() {
   const { sellerInfo, updateSellerInfo } = useStore();
-  const productsQuery = useProducts({ limit: 1000 });
+  const productsQuery = useProducts({ limit: 1000, inStock: true });
   const customersQuery = useCustomers({ limit: 1000 });
   const transactionsQuery = useTransactions({ limit: 1000 });
   const products = productsQuery.data?.data ?? [];

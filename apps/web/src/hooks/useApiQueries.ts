@@ -28,7 +28,7 @@ export const queryKeys = {
 function useInvalidateAppData() {
   const queryClient = useQueryClient();
   return () => {
-    void Promise.all([
+    return Promise.all([
       queryClient.invalidateQueries({ queryKey: ['products'] }),
       queryClient.invalidateQueries({ queryKey: ['customers'] }),
       queryClient.invalidateQueries({ queryKey: ['transactions'] }),
@@ -62,7 +62,7 @@ export function useSignOut() {
   });
 }
 
-export function useProducts(params: { search?: string; page?: number; limit?: number } = { limit: 1000 }) {
+export function useProducts(params: { search?: string; page?: number; limit?: number; inStock?: boolean } = { limit: 1000 }) {
   return useQuery({
     queryKey: queryKeys.products(params),
     queryFn: () => productsService.list(params),

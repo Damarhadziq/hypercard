@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import {
   transactions,
@@ -269,23 +269,32 @@ export const transactionService = {
         })
         .returning();
 
-      // 2. Insert all line items and decrement stock
+      // 2. Decrement stock and insert all line items.
       for (const item of input.items) {
+        const updatedProducts = await tx
+          .update(products)
+          .set({
+            stock: sql`${products.stock} - ${item.quantity}`,
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(products.id, item.productId),
+            gte(products.stock, item.quantity),
+          ))
+          .returning({ id: products.id });
+
+        if (updatedProducts.length === 0) {
+          const error = new Error('Produk tidak ditemukan atau stok tidak mencukupi.');
+          (error as Error & { status?: number }).status = 409;
+          throw error;
+        }
+
         await tx.insert(transactionItems).values({
           transactionId: txn!.id,
           productId: item.productId,
           quantity: item.quantity,
           price: item.price,
         });
-
-        // Decrement stock
-        await tx
-          .update(products)
-          .set({
-            stock: sql`${products.stock} - ${item.quantity}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(products.id, item.productId));
       }
 
       return txn!;
@@ -327,12 +336,34 @@ export const transactionService = {
   },
 
   async delete(id: string) {
-    const result = await db
-      .delete(transactions)
-      .where(eq(transactions.id, id))
-      .returning({ id: transactions.id });
+    return db.transaction(async (tx) => {
+      const items = await tx
+        .select({
+          productId: transactionItems.productId,
+          quantity: transactionItems.quantity,
+        })
+        .from(transactionItems)
+        .where(eq(transactionItems.transactionId, id));
 
-    return result.length > 0;
+      const result = await tx
+        .delete(transactions)
+        .where(eq(transactions.id, id))
+        .returning({ id: transactions.id });
+
+      if (result.length === 0) return false;
+
+      for (const item of items) {
+        await tx
+          .update(products)
+          .set({
+            stock: sql`${products.stock} + ${item.quantity}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(products.id, item.productId));
+      }
+
+      return true;
+    });
   },
 
   /**

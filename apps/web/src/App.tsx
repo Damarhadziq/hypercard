@@ -20,6 +20,8 @@ const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 const LAST_ACTIVITY_KEY = 'hypercard:last-activity';
 
 function AppLoader({ fullScreen = false, label = 'Memuat halaman...' }: { fullScreen?: boolean; label?: string }) {
+  const brandLetters = Array.from('Hypercard');
+
   return (
     <div
       className={`app-loader premium-dark flex items-center justify-center bg-[#050506] ${
@@ -29,9 +31,22 @@ function AppLoader({ fullScreen = false, label = 'Memuat halaman...' }: { fullSc
       aria-live="polite"
       aria-label={label}
     >
-      <div className="flex flex-col items-center gap-4">
-        <div className="app-loader-wordmark" aria-hidden="true" />
-        <span className="sr-only">{label}</span>
+      <div className="app-loader-content">
+        <div className="app-loader-wordmark" aria-hidden="true">
+          {brandLetters.map((letter, index) => (
+            <span
+              key={`${letter}-${index}`}
+              className="app-loader-letter"
+              style={{ '--letter-index': index } as React.CSSProperties}
+            >
+              {letter}
+            </span>
+          ))}
+        </div>
+        <div className="app-loader-track" aria-hidden="true">
+          <span />
+        </div>
+        <p className="app-loader-label">{label}</p>
       </div>
     </div>
   );
@@ -44,7 +59,7 @@ function PageFallback() {
 function AppLayout({ children, session, onLogout }: { children: React.ReactNode; session: Session; onLogout: () => void }) {
   const location = useLocation();
   const currentPath = location.pathname;
-  const productsCountQuery = useProducts({ page: 1, limit: 1 });
+  const productsCountQuery = useProducts({ page: 1, limit: 1, inStock: true });
   const customersCountQuery = useCustomers({ page: 1, limit: 1 });
   const transactionsCountQuery = useTransactions({ page: 1, limit: 1 });
   const productCount = productsCountQuery.data?.pagination.total;
