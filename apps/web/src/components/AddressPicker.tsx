@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Input } from '@pokemon-finance/ui';
 import CleanSelect, { type CleanSelectOption } from './CleanSelect';
-import { CITIES_BY_PROVINCE, DISTRICTS_BY_CITY, PROVINCES } from '../lib/indonesiaLocations';
+import { getCitiesByProvince, getDistrictsByLocation, PROVINCES } from '../lib/indonesiaLocations';
 
 const OTHER_VALUE = '__other__';
 
@@ -75,8 +75,8 @@ interface AddressPickerProps {
 }
 
 export default function AddressPicker({ value, onChange }: AddressPickerProps) {
-  const cities = CITIES_BY_PROVINCE[value.province] ?? [];
-  const districts = DISTRICTS_BY_CITY[value.city] ?? [];
+  const cities = getCitiesByProvince(value.province);
+  const districts = getDistrictsByLocation(value.province, value.city);
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
