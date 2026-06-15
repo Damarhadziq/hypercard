@@ -302,15 +302,6 @@
     }
   }
 
-  @keyframes login-button-shimmer {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(240%);
-    }
-  }
-
   .login-submit-button {
     position: relative;
     isolation: isolate;
@@ -322,36 +313,6 @@
       box-shadow 280ms ease,
       opacity 220ms ease,
       transform 180ms ease !important;
-  }
-
-  .login-submit-button > * {
-    position: relative;
-    z-index: 2;
-  }
-
-  .login-submit-button::after {
-    position: absolute;
-    z-index: 1;
-    top: 0;
-    bottom: 0;
-    left: -80%;
-    width: 80%;
-    content: '';
-    pointer-events: none;
-    opacity: 0;
-    background: linear-gradient(
-      105deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.08) 20%,
-      rgba(255, 255, 255, 0.62) 40%,
-      rgba(240, 210, 123, 0.92) 50%,
-      rgba(255, 255, 255, 0.62) 60%,
-      rgba(255, 255, 255, 0.08) 80%,
-      transparent 100%
-    );
-    filter: blur(0.5px);
-    transform: translateX(0);
-    transition: opacity 220ms ease;
   }
 
   .login-submit-button-active {
@@ -368,17 +329,19 @@
       0 0 18px rgba(214, 180, 93, 0.08) !important;
   }
 
-  .login-submit-button-active::after {
-    opacity: 1;
-    animation: login-button-shimmer 1.65s linear infinite;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .login-submit-button-active::after {
-      animation: none;
-      opacity: 0.24;
-      transform: translateX(120%);
-    }
+  .login-submit-button-active:hover {
+    border-color: rgba(240, 210, 123, 0.92) !important;
+    background: linear-gradient(
+      105deg,
+      rgba(58, 40, 21, 0.98),
+      rgba(122, 83, 29, 0.98),
+      rgba(58, 40, 21, 0.98)
+    ) !important;
+    color: #ffe6a3 !important;
+    box-shadow:
+      0 12px 30px rgba(0, 0, 0, 0.32),
+      0 0 22px rgba(214, 180, 93, 0.16) !important;
+    transform: translateY(-1px);
   }
 
   .animate-fade-in {
