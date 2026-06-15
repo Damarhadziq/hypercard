@@ -152,7 +152,7 @@ export default function Login({ onLogin }: LoginProps) {
             <span className="text-lg font-semibold text-white">100+ Customer</span>
           </div>
 
-          <p className="absolute bottom-9 right-8 text-[24px] font-semibold text-white">
+          <p className="absolute bottom-9 right-8 hidden text-[24px] font-semibold text-white xl:block">
             Pokemon Trading Card
           </p>
         </div>

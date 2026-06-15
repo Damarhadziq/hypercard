@@ -72,6 +72,7 @@ export interface DashboardReportSummary {
     totalSold: number;
     totalItems: number;
     totalProfit: number;
+    transactionCount: number;
     customerCount: number;
     costBreakdown: {
       revenue: number;

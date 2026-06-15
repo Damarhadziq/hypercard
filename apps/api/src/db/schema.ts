@@ -3,6 +3,7 @@ import {
   text,
   integer,
   boolean,
+  index,
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -105,47 +106,61 @@ export const customers = pgTable('customers', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-export const transactions = pgTable('transactions', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  invoiceNumber: text('invoice_number').notNull().unique(),
-  customerId: uuid('customer_id')
-    .notNull()
-    .references(() => customers.id),
-  subtotal: integer('subtotal').notNull().default(0),
-  discount: integer('discount').notNull().default(0),
-  shippingCost: integer('shipping_cost').notNull().default(0),
-  shippingCourier: text('shipping_courier'),
-  shippingService: text('shipping_service'),
-  shippingDescription: text('shipping_description'),
-  shippingEtd: text('shipping_etd'),
-  shippingWeight: integer('shipping_weight'),
-  shippingOrigin: text('shipping_origin'),
-  shippingDestination: text('shipping_destination'),
-  total: integer('total').notNull().default(0),
-  status: text('status').notNull().default('Belum Dibayar'),
-  paymentMethod: text('payment_method').default('Mandiri'),
-  mandiriAccountNumber: text('mandiri_account_number'),
-  mandiriAccountHolder: text('mandiri_account_holder'),
-  bcaAccountNumber: text('bca_account_number'),
-  bcaAccountHolder: text('bca_account_holder'),
-  notes: text('notes'),
-  date: timestamp('date').notNull().defaultNow(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+export const transactions = pgTable(
+  'transactions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    invoiceNumber: text('invoice_number').notNull().unique(),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customers.id),
+    subtotal: integer('subtotal').notNull().default(0),
+    discount: integer('discount').notNull().default(0),
+    shippingCost: integer('shipping_cost').notNull().default(0),
+    shippingCourier: text('shipping_courier'),
+    shippingService: text('shipping_service'),
+    shippingDescription: text('shipping_description'),
+    shippingEtd: text('shipping_etd'),
+    shippingWeight: integer('shipping_weight'),
+    shippingOrigin: text('shipping_origin'),
+    shippingDestination: text('shipping_destination'),
+    total: integer('total').notNull().default(0),
+    status: text('status').notNull().default('Belum Dibayar'),
+    paymentMethod: text('payment_method').default('Mandiri'),
+    mandiriAccountNumber: text('mandiri_account_number'),
+    mandiriAccountHolder: text('mandiri_account_holder'),
+    bcaAccountNumber: text('bca_account_number'),
+    bcaAccountHolder: text('bca_account_holder'),
+    notes: text('notes'),
+    date: timestamp('date').notNull().defaultNow(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('transactions_status_date_idx').on(table.status, table.date),
+    index('transactions_customer_id_idx').on(table.customerId),
+  ],
+);
 
-export const transactionItems = pgTable('transaction_items', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  transactionId: uuid('transaction_id')
-    .notNull()
-    .references(() => transactions.id, { onDelete: 'cascade' }),
-  productId: uuid('product_id')
-    .notNull()
-    .references(() => products.id),
-  quantity: integer('quantity').notNull().default(1),
-  price: integer('price').notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+export const transactionItems = pgTable(
+  'transaction_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    transactionId: uuid('transaction_id')
+      .notNull()
+      .references(() => transactions.id, { onDelete: 'cascade' }),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id),
+    quantity: integer('quantity').notNull().default(1),
+    price: integer('price').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('transaction_items_transaction_id_idx').on(table.transactionId),
+    index('transaction_items_product_id_idx').on(table.productId),
+  ],
+);
 
 // ──────────────────────────────────────────────────────────
 // Relations

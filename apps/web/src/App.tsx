@@ -5,9 +5,6 @@ import { BarChart3, Home, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Shoppin
 import type { Session } from './pages/Login';
 import { FeedbackProvider } from './components/Feedback';
 import { queryKeys, useAuthSession, useCustomers, useProducts, useSignOut, useTransactions } from './hooks/useApiQueries';
-import { customersService } from './services/customers';
-import { productsService } from './services/products';
-import { transactionsService } from './services/transactions';
 
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Products = React.lazy(() => import('./pages/Products'));
@@ -328,22 +325,7 @@ function App() {
     queryClient.setQueryData(queryKeys.authSession, authenticatedSession);
     window.history.replaceState(null, '', '/');
 
-    const listParams = { limit: 1000 };
     void import('./pages/Dashboard');
-    void Promise.allSettled([
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.transactions(listParams),
-        queryFn: () => transactionsService.list(listParams),
-      }),
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.products(listParams),
-        queryFn: () => productsService.list(listParams),
-      }),
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.customers(listParams),
-        queryFn: () => customersService.list(listParams),
-      }),
-    ]);
 
     if (openingTimerRef.current) {
       window.clearTimeout(openingTimerRef.current);

@@ -3,12 +3,14 @@ import { Card, CardContent, Button, Input, Table, TableHeader, TableBody, TableR
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowDown, ArrowUp, ArrowUpDown, BadgeDollarSign, Calendar, ChevronDown, CircleDollarSign, Crown, Download, FileText, Gauge, Info, Package, RotateCcw, Search, TrendingUp, WalletCards } from 'lucide-react';
 import { format } from 'date-fns';
-import { type Customer, type Product, type Transaction } from '../store/useStore';
-import { useCustomers, useDashboardReportItems, useDashboardReportSummary, useProducts, useTransactions } from '../hooks/useApiQueries';
+import { useDashboardReportItems, useDashboardReportSummary } from '../hooks/useApiQueries';
 import useClampedPage from '../hooks/useClampedPage';
-import { generateExcelReport, type ReportPeriod } from '../lib/generateReport';
+import type { ReportPeriod } from '../lib/generateReport';
 import { useFeedback } from '../components/Feedback';
 import Pagination from '../components/Pagination';
+import { customersService } from '../services/customers';
+import { productsService } from '../services/products';
+import { transactionsService } from '../services/transactions';
 import {
   calculateCostBreakdown,
   formatPercentage,
@@ -28,10 +30,6 @@ const MONTH_SHORT = [
   'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
 ];
 
-const EMPTY_TRANSACTIONS: Transaction[] = [];
-const EMPTY_PRODUCTS: Product[] = [];
-const EMPTY_CUSTOMERS: Customer[] = [];
-
 function getPeriodDisplayLabel(period: ReportPeriod): string {
   if (period.mode === 'month' && period.month !== undefined && period.year !== undefined) {
     return `${MONTH_NAMES[period.month]} ${period.year}`;
@@ -49,9 +47,10 @@ function formatPercentDelta(current: number, previous: number) {
 }
 
 function formatProfitSignal(current: number, previous: number) {
-  const sign = current >= 0 ? '+' : '-';
-  if (previous === 0) return current === 0 ? '0%' : `${sign}100%`;
-  const value = Math.abs(((current - previous) / previous) * 100);
+  const delta = current - previous;
+  if (previous === 0) return delta === 0 ? '0%' : `${delta > 0 ? '+' : '-'}100%`;
+  const value = Math.abs((delta / Math.abs(previous)) * 100);
+  const sign = delta >= 0 ? '+' : '-';
   return `${sign}${value.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`;
 }
 
@@ -204,6 +203,7 @@ function MetricCard({
   icon,
   trend,
   isPositive = true,
+  isNeutral = false,
   active = false,
   onClick,
   iconTone,
@@ -213,13 +213,16 @@ function MetricCard({
   icon: React.ReactNode;
   trend?: string;
   isPositive?: boolean;
+  isNeutral?: boolean;
   active?: boolean;
   onClick?: () => void;
   iconTone: string;
 }) {
-  const trendTone = isPositive
-    ? 'border-green-500/25 bg-green-500/10 text-green-500'
-    : 'border-red-500/25 bg-red-500/10 text-red-500';
+  const trendTone = isNeutral
+    ? 'border-finance-300 bg-finance-100 text-finance-500'
+    : isPositive
+      ? 'border-green-500/25 bg-green-500/10 text-green-500'
+      : 'border-red-500/25 bg-red-500/10 text-red-500';
 
   const content = (
     <Card className={`h-full overflow-hidden transition-all ${active ? 'border-accent/70 bg-accent/10 shadow-[inset_0_0_0_1px_rgba(214,180,93,0.22)]' : ''}`}>
@@ -596,13 +599,8 @@ function ReportChart({
 }
 
 export default function Reports() {
-  const transactionsQuery = useTransactions({ limit: 1000 });
-  const productsQuery = useProducts({ limit: 1000 });
-  const customersQuery = useCustomers({ limit: 1000 });
-  const transactions = transactionsQuery.data?.data ?? EMPTY_TRANSACTIONS;
-  const products = productsQuery.data?.data ?? EMPTY_PRODUCTS;
-  const customers = customersQuery.data?.data ?? EMPTY_CUSTOMERS;
   const { notify } = useFeedback();
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const now = new Date();
   const [period, setPeriod] = useState<ReportPeriod>({ mode: 'month', month: now.getMonth(), year: now.getFullYear() });
@@ -702,15 +700,31 @@ export default function Reports() {
   const hasActiveFilters = Boolean(searchQuery.trim()) || sortKey !== 'date' || sortDirection !== 'desc';
 
   const handleDownload = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+
     try {
-      await generateExcelReport(transactions, products, customers, period);
+      const [transactionsResult, productsResult, customersResult] = await Promise.all([
+        transactionsService.list({ limit: 1000 }),
+        productsService.list({ limit: 1000 }),
+        customersService.list({ limit: 1000 }),
+      ]);
+      const { generateExcelReport } = await import('../lib/generateReport');
+      await generateExcelReport(
+        transactionsResult.data,
+        productsResult.data,
+        customersResult.data,
+        period,
+      );
       notify('success', 'Laporan berhasil dibuat', `Laporan ${getPeriodDisplayLabel(period)} mulai diunduh.`);
     } catch {
       notify('error', 'Laporan gagal dibuat', 'Silakan coba kembali beberapa saat lagi.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
-  const isLoading = transactionsQuery.isLoading || productsQuery.isLoading || customersQuery.isLoading || reportSummaryQuery.isLoading;
+  const isLoading = reportSummaryQuery.isLoading;
   const isTableLoading = isLoading || reportItemsQuery.isLoading;
 
   return (
@@ -722,18 +736,18 @@ export default function Reports() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <PeriodSelector period={period} onChange={handlePeriodChange} availableYears={availableYears} />
-          <Button variant="outline" onClick={handleDownload} className="gap-2">
+          <Button variant="outline" onClick={handleDownload} disabled={isDownloading} className="gap-2">
             <Download size={16} />
-            Download Excel
+            {isDownloading ? 'Menyiapkan...' : 'Download Excel'}
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Total Omzet" value={`Rp ${totalSold.toLocaleString('id-ID')}`} trend={period.mode === 'all' ? undefined : formatPercentDelta(totalSold, previousSold)} isPositive={totalSold >= previousSold} icon={<TrendingUp size={18} />} iconTone="border-rose-400/35 bg-rose-500/10 text-rose-400 shadow-[0_0_14px_rgba(251,113,133,0.16)]" />
-        <MetricCard title="Item Terjual" value={totalItems.toLocaleString('id-ID')} trend={period.mode === 'all' ? undefined : formatNumberDelta(totalItems, previousItems)} isPositive={totalItems >= previousItems} icon={<Package size={18} />} iconTone="border-sky-400/35 bg-sky-500/10 text-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.16)]" />
-        <MetricCard title="Jumlah Pelanggan" value={customerCount.toLocaleString('id-ID')} trend={period.mode === 'all' ? undefined : formatNumberDelta(customerCount, previousCustomers)} isPositive={customerCount >= previousCustomers} icon={<FileText size={18} />} iconTone="border-amber-400/35 bg-amber-500/10 text-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.16)]" />
-        <MetricCard title="Total Untung" value={`Rp ${totalProfit.toLocaleString('id-ID')}`} trend={period.mode === 'all' ? undefined : formatProfitSignal(totalProfit, previousProfit)} isPositive={totalProfit >= 0} icon={<WalletCards size={18} />} iconTone="border-emerald-400/35 bg-emerald-500/10 text-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.16)]" />
+        <MetricCard title="Total Omzet" value={`Rp ${totalSold.toLocaleString('id-ID')}`} trend={period.mode === 'all' ? undefined : formatPercentDelta(totalSold, previousSold)} isPositive={totalSold >= previousSold} isNeutral={totalSold === previousSold} icon={<TrendingUp size={18} />} iconTone="border-rose-400/35 bg-rose-500/10 text-rose-400 shadow-[0_0_14px_rgba(251,113,133,0.16)]" />
+        <MetricCard title="Item Terjual" value={totalItems.toLocaleString('id-ID')} trend={period.mode === 'all' ? undefined : formatNumberDelta(totalItems, previousItems)} isPositive={totalItems >= previousItems} isNeutral={totalItems === previousItems} icon={<Package size={18} />} iconTone="border-sky-400/35 bg-sky-500/10 text-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.16)]" />
+        <MetricCard title="Jumlah Pelanggan" value={customerCount.toLocaleString('id-ID')} trend={period.mode === 'all' ? undefined : formatNumberDelta(customerCount, previousCustomers)} isPositive={customerCount >= previousCustomers} isNeutral={customerCount === previousCustomers} icon={<FileText size={18} />} iconTone="border-amber-400/35 bg-amber-500/10 text-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.16)]" />
+        <MetricCard title="Total Untung" value={`Rp ${totalProfit.toLocaleString('id-ID')}`} trend={period.mode === 'all' ? undefined : formatProfitSignal(totalProfit, previousProfit)} isPositive={totalProfit >= previousProfit} isNeutral={totalProfit === previousProfit} icon={<WalletCards size={18} />} iconTone="border-emerald-400/35 bg-emerald-500/10 text-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.16)]" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:h-[390px] xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">

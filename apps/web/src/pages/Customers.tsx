@@ -167,7 +167,66 @@ export default function Customers() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="space-y-3 md:hidden">
+            {customersQuery.isLoading ? (
+              <div className="rounded-lg border border-dashed border-finance-200 py-10 text-center text-sm text-finance-500">
+                Memuat pembeli...
+              </div>
+            ) : customers.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-finance-200 py-10 text-center text-sm text-finance-500">
+                Tidak ada pembeli ditemukan.
+              </div>
+            ) : (
+              customers.map((customer) => (
+                <article key={customer.id} className="rounded-lg border border-finance-200 bg-finance-50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold text-finance-950">{customer.name}</h3>
+                      <div className="mt-2 flex items-center gap-2 text-sm text-finance-500">
+                        <Phone size={14} className="shrink-0" />
+                        <span className="truncate">{customer.phone || 'Nomor belum tersedia'}</span>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 text-finance-500"
+                        onClick={() => openEditForm(customer)}
+                        aria-label={`Edit ${customer.name}`}
+                      >
+                        <Edit2 size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 text-primary hover:text-primary-hover"
+                        onClick={() => handleDelete(customer)}
+                        aria-label={`Hapus ${customer.name}`}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-start gap-2 border-t border-finance-200 pt-3 text-sm text-finance-500">
+                    <MapPin size={14} className="mt-0.5 shrink-0" />
+                    <p className="min-w-0 break-words">
+                      {customer.address || 'Alamat belum tersedia'}
+                      {customer.postalCode ? ` (${customer.postalCode})` : ''}
+                    </p>
+                  </div>
+                  {(customer.history || customer.notes) && (
+                    <p className="mt-3 line-clamp-2 text-xs leading-5 text-finance-400">
+                      {customer.history || customer.notes}
+                    </p>
+                  )}
+                </article>
+              ))
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nama Pembeli</TableHead>
@@ -231,7 +290,8 @@ export default function Customers() {
                 ))
               )}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
           <Pagination
             page={page}
             pageSize={pageSize}

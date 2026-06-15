@@ -4,16 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, Button } from '@pokemon-finan
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { format } from 'date-fns';
 import { TrendingUp, Package, CreditCard, PlusCircle, Download, Calendar, ChevronDown, FileClock } from 'lucide-react';
-import type { Customer, Product, Transaction } from '../store/useStore';
 import { useFeedback } from '../components/Feedback';
-import { useCustomers, useProducts, useTransactions } from '../hooks/useApiQueries';
-import {
-  filterTransactionsByPeriod,
-  calculateStats,
-  generateChartData,
-  generateExcelReport,
-  type ReportPeriod,
-} from '../lib/generateReport';
+import { useDashboardRecent, useDashboardReportSummary } from '../hooks/useApiQueries';
+import type { ReportPeriod } from '../lib/generateReport';
+import { customersService } from '../services/customers';
+import { productsService } from '../services/products';
+import { transactionsService } from '../services/transactions';
 
 const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -35,30 +31,12 @@ function getPeriodDisplayLabel(period: ReportPeriod): string {
   return 'Semua Periode';
 }
 
-function getAvailableYears(transactions: { date: string }[]): number[] {
-  const years = new Set(transactions.map((t) => new Date(t.date).getFullYear()));
-  const currentYear = new Date().getFullYear();
-  years.add(currentYear);
-  return Array.from(years).sort((a, b) => b - a);
-}
-
 function formatAxisRupiah(value: number) {
   if (value === 0) return '0';
   if (Math.abs(value) >= 1_000_000) {
     return `${(value / 1_000_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })}jt`;
   }
   return `${(value / 1_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })}k`;
-}
-
-function getPreviousPeriod(period: ReportPeriod): ReportPeriod {
-  if (period.mode === 'month' && period.month !== undefined && period.year !== undefined) {
-    if (period.month === 0) return { mode: 'month', month: 11, year: period.year - 1 };
-    return { mode: 'month', month: period.month - 1, year: period.year };
-  }
-  if (period.mode === 'year' && period.year !== undefined) {
-    return { mode: 'year', year: period.year - 1 };
-  }
-  return period;
 }
 
 function formatPercentDelta(current: number, previous: number) {
@@ -68,9 +46,10 @@ function formatPercentDelta(current: number, previous: number) {
 }
 
 function formatProfitSignal(current: number, previous: number) {
-  const sign = current >= 0 ? '+' : '-';
-  if (previous === 0) return current === 0 ? '0%' : `${sign}100%`;
-  const value = Math.abs(((current - previous) / previous) * 100);
+  const delta = current - previous;
+  if (previous === 0) return delta === 0 ? '0%' : `${delta > 0 ? '+' : '-'}100%`;
+  const value = Math.abs((delta / Math.abs(previous)) * 100);
+  const sign = delta >= 0 ? '+' : '-';
   return `${sign}${value.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`;
 }
 
@@ -224,26 +203,37 @@ function PeriodOption({ label, active, onClick }: { label: string; active: boole
 // ─── Download Period Selector (for choosing report period) ──
 
 function DownloadButton({
-  transactions,
-  products,
-  customers,
   availableYears,
 }: {
-  transactions: Transaction[];
-  products: Product[];
-  customers: Customer[];
   availableYears: number[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { notify } = useFeedback();
 
   const handleDownload = async (period: ReportPeriod) => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+
     try {
-      await generateExcelReport(transactions, products, customers, period);
+      const [transactionsResult, productsResult, customersResult] = await Promise.all([
+        transactionsService.list({ limit: 1000 }),
+        productsService.list({ limit: 1000 }),
+        customersService.list({ limit: 1000 }),
+      ]);
+      const { generateExcelReport } = await import('../lib/generateReport');
+      await generateExcelReport(
+        transactionsResult.data,
+        productsResult.data,
+        customersResult.data,
+        period,
+      );
       notify('success', 'Laporan berhasil dibuat', `Laporan ${getPeriodDisplayLabel(period)} mulai diunduh.`);
       setIsOpen(false);
     } catch {
       notify('error', 'Laporan gagal dibuat', 'Silakan coba kembali beberapa saat lagi.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -254,10 +244,11 @@ function DownloadButton({
         aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((v) => !v)}
+        disabled={isDownloading}
         className="dropdown-trigger flex items-center gap-2 px-3 text-sm"
       >
         <Download size={16} />
-        <span className="hidden sm:inline">Download Laporan</span>
+        <span className="hidden sm:inline">{isDownloading ? 'Menyiapkan...' : 'Download Laporan'}</span>
         <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </Button>
 
@@ -349,59 +340,47 @@ function DownloadButton({
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const transactionsQuery = useTransactions({ limit: 1000 });
-  const productsQuery = useProducts({ limit: 1000 });
-  const customersQuery = useCustomers({ limit: 1000 });
-  const transactions = useMemo(() => transactionsQuery.data?.data ?? [], [transactionsQuery.data]);
-  const products = useMemo(() => productsQuery.data?.data ?? [], [productsQuery.data]);
-  const customers = useMemo(() => customersQuery.data?.data ?? [], [customersQuery.data]);
-
   const now = new Date();
   const [period, setPeriod] = useState<ReportPeriod>({
     mode: 'month',
     month: now.getMonth(),
     year: now.getFullYear(),
   });
-
-  const availableYears = useMemo(() => getAvailableYears(transactions), [transactions]);
-
-  const filteredTransactions = useMemo(
-    () => filterTransactionsByPeriod(transactions, period)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-    [transactions, period]
-  );
-
-  const stats = useMemo(
-    () => calculateStats(filteredTransactions, products),
-    [filteredTransactions, products]
-  );
-
-  const previousTransactions = useMemo(
-    () => period.mode === 'all' ? [] : filterTransactionsByPeriod(transactions, getPreviousPeriod(period)),
-    [period, transactions],
-  );
-
-  const previousStats = useMemo(
-    () => calculateStats(previousTransactions, products),
-    [previousTransactions, products],
-  );
-
-  const customerCount = useMemo(
-    () => new Set(filteredTransactions.map((transaction) => transaction.customerId)).size,
-    [filteredTransactions],
-  );
-
-  const previousCustomerCount = useMemo(
-    () => new Set(previousTransactions.map((transaction) => transaction.customerId)).size,
-    [previousTransactions],
-  );
-
+  const summaryQuery = useDashboardReportSummary({
+    mode: period.mode,
+    month: period.month,
+    year: period.year,
+  });
+  const recentQuery = useDashboardRecent(3);
+  const currentSummary = summaryQuery.data?.current;
+  const previousSummary = summaryQuery.data?.previous;
+  const totalSold = currentSummary?.totalSold ?? 0;
+  const totalProfit = currentSummary?.totalProfit ?? 0;
+  const productsSold = currentSummary?.totalItems ?? 0;
+  const customerCount = currentSummary?.customerCount ?? 0;
+  const transactionCount = currentSummary?.transactionCount ?? 0;
+  const previousSold = previousSummary?.totalSold ?? 0;
+  const previousProfit = previousSummary?.totalProfit ?? 0;
+  const previousProductsSold = previousSummary?.totalItems ?? 0;
+  const previousCustomerCount = previousSummary?.customerCount ?? 0;
+  const availableYears = summaryQuery.data?.availableYears ?? [now.getFullYear()];
   const chartData = useMemo(
-    () => generateChartData(filteredTransactions, period),
-    [filteredTransactions, period]
+    () => (summaryQuery.data?.chart ?? []).map((point) => {
+      const date = new Date(point.date);
+      return {
+        name: period.mode === 'month'
+          ? format(date, 'dd')
+          : period.mode === 'year'
+            ? format(date, 'MMM')
+            : format(date, 'MMM yy'),
+        date: date.toISOString(),
+        total: point.sold,
+      };
+    }),
+    [period.mode, summaryQuery.data?.chart],
   );
-
-  const recentTransactions = filteredTransactions.slice(0, 3);
+  const recentTransactions = recentQuery.data ?? [];
+  const isLoading = summaryQuery.isLoading || recentQuery.isLoading;
 
   return (
     <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden">
@@ -413,12 +392,7 @@ export default function Dashboard() {
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <PeriodSelector period={period} onChange={setPeriod} availableYears={availableYears} />
-          <DownloadButton
-            transactions={transactions}
-            products={products}
-            customers={customers}
-            availableYears={availableYears}
-          />
+          <DownloadButton availableYears={availableYears} />
           <Button onClick={() => navigate('/invoices')} className="flex items-center justify-center gap-2 px-3 text-sm">
             <PlusCircle size={16} />
             <span className="hidden sm:inline">Buat Invoice</span>
@@ -426,33 +400,44 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {filteredTransactions.length === 0 && (
+      {isLoading && (
+        <div className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 xl:grid-cols-4" role="status" aria-label="Memuat ringkasan penjualan">
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="h-32 animate-pulse rounded-xl border border-finance-200 bg-finance-50" />
+          ))}
+        </div>
+      )}
+
+      {!isLoading && !summaryQuery.data?.hasCurrentData && (
         <p className="text-xs text-finance-400">Belum ada transaksi di periode ini</p>
       )}
 
       {/* Metric Cards */}
-      <div className="grid min-w-0 grid-cols-1 gap-4 pt-3 sm:grid-cols-2 xl:grid-cols-4">
+      {!isLoading && <div className="grid min-w-0 grid-cols-1 gap-4 pt-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           title="Total Omzet"
-          value={`Rp ${stats.omzet.toLocaleString('id-ID')}`}
-          trend={period.mode === 'all' ? `${stats.transactionCount} transaksi` : formatPercentDelta(stats.omzet, previousStats.omzet)}
-          isPositive={stats.omzet >= previousStats.omzet}
+          value={`Rp ${totalSold.toLocaleString('id-ID')}`}
+          trend={period.mode === 'all' ? `${transactionCount} transaksi` : formatPercentDelta(totalSold, previousSold)}
+          isPositive={totalSold >= previousSold}
+          isNeutral={period.mode === 'all' || totalSold === previousSold}
           icon={<TrendingUp size={18} />}
           iconTone="border-rose-400/35 bg-rose-500/10 text-rose-400 shadow-[0_0_14px_rgba(251,113,133,0.16)]"
         />
         <MetricCard
           title="Total Untung"
-          value={`Rp ${stats.totalProfit.toLocaleString('id-ID')}`}
-          trend={period.mode === 'all' ? `${stats.completedCount} transaksi lunas` : formatProfitSignal(stats.totalProfit, previousStats.totalProfit)}
-          isPositive={stats.totalProfit >= 0}
+          value={`Rp ${totalProfit.toLocaleString('id-ID')}`}
+          trend={period.mode === 'all' ? `${transactionCount} transaksi lunas` : formatProfitSignal(totalProfit, previousProfit)}
+          isPositive={totalProfit >= previousProfit}
+          isNeutral={period.mode === 'all' || totalProfit === previousProfit}
           icon={<CreditCard size={18} />}
           iconTone="border-emerald-400/35 bg-emerald-500/10 text-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.16)]"
         />
         <MetricCard
           title="Produk Terjual"
-          value={stats.productsSold.toString()}
-          trend={period.mode === 'all' ? 'unit terjual' : formatNumberDelta(stats.productsSold, previousStats.productsSold)}
-          isPositive={stats.productsSold >= previousStats.productsSold}
+          value={productsSold.toString()}
+          trend={period.mode === 'all' ? 'unit terjual' : formatNumberDelta(productsSold, previousProductsSold)}
+          isPositive={productsSold >= previousProductsSold}
+          isNeutral={period.mode === 'all' || productsSold === previousProductsSold}
           icon={<Package size={18} />}
           iconTone="border-sky-400/35 bg-sky-500/10 text-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.16)]"
         />
@@ -461,13 +446,14 @@ export default function Dashboard() {
           value={customerCount.toLocaleString('id-ID')}
           trend={period.mode === 'all' ? 'pelanggan aktif' : formatNumberDelta(customerCount, previousCustomerCount)}
           isPositive={customerCount >= previousCustomerCount}
+          isNeutral={period.mode === 'all' || customerCount === previousCustomerCount}
           icon={<FileClock size={18} />}
           iconTone="border-amber-400/35 bg-amber-500/10 text-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.16)]"
         />
-      </div>
+      </div>}
 
       {/* Charts & Tables */}
-      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-3">
+      {!isLoading && <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Main Chart */}
         <Card className="animate-soft-in min-w-0 lg:col-span-2">
           <CardHeader className="px-6 pb-4 pt-5">
@@ -542,7 +528,7 @@ export default function Dashboard() {
           <CardContent className="px-6 pb-5">
             <div className="space-y-4">
               {recentTransactions.map((trx) => {
-                const customerName = trx.customerName || customers.find((customer) => customer.id === trx.customerId)?.name || 'Pembeli';
+                const customerName = trx.customerName || 'Pembeli';
                 return (
                 <Link
                   key={trx.id}
@@ -573,7 +559,7 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -595,7 +581,11 @@ function MetricCard({
   icon: ReactNode;
   iconTone: string;
 }) {
-  const trendTone = isNeutral ? 'text-finance-500' : isPositive ? 'text-green-600' : 'text-red-600';
+  const trendTone = isNeutral
+    ? 'border-finance-300 bg-finance-100 text-finance-500'
+    : isPositive
+      ? 'border-green-500/25 bg-green-500/10 text-green-500'
+      : 'border-red-500/25 bg-red-500/10 text-red-500';
 
   return (
     <Card className="animate-soft-in min-w-0 overflow-hidden">
@@ -609,7 +599,7 @@ function MetricCard({
         <div className="min-w-0">
           <div className="flex min-w-0 items-baseline gap-1.5">
             <h4 className="min-w-0 whitespace-nowrap text-lg font-bold text-finance-950 xl:text-xl 2xl:text-2xl">{value}</h4>
-            <span className={`inline-flex shrink-0 items-center gap-1 text-[11px] font-bold 2xl:text-xs ${trendTone}`}>
+            <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-extrabold 2xl:text-xs ${trendTone}`}>
               {trend}
             </span>
           </div>

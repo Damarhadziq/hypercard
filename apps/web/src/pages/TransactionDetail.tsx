@@ -168,33 +168,35 @@ export default function TransactionDetail() {
             <CardTitle>Produk Dibeli</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="h-10 px-3">Produk</TableHead>
-                  <TableHead className="h-10 px-3 text-right">Harga</TableHead>
-                  <TableHead className="h-10 px-3 text-right">Qty</TableHead>
-                  <TableHead className="h-10 px-3 text-right">Subtotal</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {itemPagination.paginatedItems.map((item) => {
-                  const productName = item.productName || 'Produk';
-                  const productMeta = item.productCondition || item.productSetName || '-';
-                  return (
-                    <TableRow key={item.productId}>
-                      <TableCell className="p-3">
-                        <p className="font-semibold text-finance-950">{productName}</p>
-                        <p className="mt-1 text-xs text-finance-500">{productMeta}</p>
-                      </TableCell>
-                      <TableCell className="p-3 text-right">Rp {item.price.toLocaleString('id-ID')}</TableCell>
-                      <TableCell className="p-3 text-right">{item.quantity}</TableCell>
-                      <TableCell className="p-3 text-right font-semibold">Rp {(item.price * item.quantity).toLocaleString('id-ID')}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <div className="-mx-1 overflow-x-auto pb-1">
+              <Table className="min-w-[620px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="h-10 px-3">Produk</TableHead>
+                    <TableHead className="h-10 px-3 text-right">Harga</TableHead>
+                    <TableHead className="h-10 px-3 text-right">Qty</TableHead>
+                    <TableHead className="h-10 px-3 text-right">Subtotal</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {itemPagination.paginatedItems.map((item) => {
+                    const productName = item.productName || 'Produk';
+                    const productMeta = item.productCondition || item.productSetName || '-';
+                    return (
+                      <TableRow key={item.productId}>
+                        <TableCell className="p-3">
+                          <p className="font-semibold text-finance-950">{productName}</p>
+                          <p className="mt-1 text-xs text-finance-500">{productMeta}</p>
+                        </TableCell>
+                        <TableCell className="p-3 text-right">Rp {item.price.toLocaleString('id-ID')}</TableCell>
+                        <TableCell className="p-3 text-right">{item.quantity}</TableCell>
+                        <TableCell className="p-3 text-right font-semibold">Rp {(item.price * item.quantity).toLocaleString('id-ID')}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
             <Pagination
               page={itemPagination.page}
               pageSize={itemPagination.pageSize}

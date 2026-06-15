@@ -329,6 +329,7 @@ export const dashboardService = {
         totalSold,
         totalItems,
         totalProfit,
+        transactionCount: periodData.transactionRows.length,
         customerCount: new Set(periodData.transactionRows.map((row) => row.customerId)).size,
         costBreakdown: {
           revenue: totalSold,
