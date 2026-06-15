@@ -83,7 +83,7 @@ function SidebarTooltip({ label, children }: { label: string; children: React.Re
     <>
       <span
         ref={triggerRef}
-        className="inline-flex"
+        className="flex w-full"
         aria-describedby={position ? tooltipId : undefined}
         onMouseEnter={showTooltip}
         onMouseLeave={() => setPosition(null)}
@@ -330,7 +330,7 @@ function NavItem({
       </span>
       {hasCount && (
         <span
-          className={`${collapsed ? 'absolute right-1.5 top-1 min-w-4 px-1 text-[9px]' : 'ml-2 min-w-6 px-2 text-[10px]'} flex h-5 shrink-0 items-center justify-center rounded-full border border-accent/25 bg-accent/12 font-bold tabular-nums text-accent transition-all duration-200`}
+          className={`${collapsed ? 'absolute right-1.5 top-1 min-w-4 px-1 text-[9px]' : 'ml-2 min-w-6 px-2 text-[10px]'} flex h-5 shrink-0 items-center justify-center rounded-full border border-accent/35 bg-[#0c0c0f] font-bold tabular-nums text-accent transition-all duration-200`}
           aria-label={`${count} ${label.toLowerCase()}`}
         >
           {formatSidebarCount(count)}
