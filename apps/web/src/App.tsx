@@ -19,7 +19,15 @@ const Login = React.lazy(() => import('./pages/Login'));
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 const LAST_ACTIVITY_KEY = 'hypercard:last-activity';
 
-function AppLoader({ fullScreen = false, label = 'Memuat halaman...' }: { fullScreen?: boolean; label?: string }) {
+function AppLoader({
+  fullScreen = false,
+  label = 'Memuat halaman...',
+  variant = 'page',
+}: {
+  fullScreen?: boolean;
+  label?: string;
+  variant?: 'initial' | 'page';
+}) {
   const brandLetters = Array.from('Hypercard');
 
   return (
@@ -32,21 +40,21 @@ function AppLoader({ fullScreen = false, label = 'Memuat halaman...' }: { fullSc
       aria-label={label}
     >
       <div className="app-loader-content">
-        <div className="app-loader-wordmark" aria-hidden="true">
-          {brandLetters.map((letter, index) => (
-            <span
-              key={`${letter}-${index}`}
-              className="app-loader-letter"
-              style={{ '--letter-index': index } as React.CSSProperties}
-            >
-              {letter}
-            </span>
-          ))}
-        </div>
-        <div className="app-loader-track" aria-hidden="true">
-          <span />
-        </div>
-        <p className="app-loader-label">{label}</p>
+        {variant === 'initial' ? (
+          <div className="app-loader-wordmark" aria-hidden="true">
+            {brandLetters.map((letter, index) => (
+              <span
+                key={`${letter}-${index}`}
+                className="app-loader-letter"
+                style={{ '--letter-index': index } as React.CSSProperties}
+              >
+                {letter}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="app-loader-page-wordmark" aria-hidden="true">Hypercard</div>
+        )}
       </div>
     </div>
   );
@@ -257,16 +265,16 @@ function NavItem({
     <Link
       to={to}
       title={collapsed ? `${label}${hasCount ? ` (${count})` : ''}` : undefined}
-      className={`group relative flex h-11 items-center overflow-hidden rounded-lg border py-2.5 text-sm font-medium transition-[background-color,border-color,color,box-shadow,padding] duration-200 ease-out active:brightness-95 ${collapsed ? 'justify-center px-0' : 'justify-start px-3'} ${
+      className={`sidebar-nav-item group relative flex h-11 items-center overflow-hidden rounded-lg border py-2.5 text-sm font-medium transition-[background-color,border-color,color,box-shadow,padding] duration-200 ease-out active:brightness-95 ${collapsed ? 'justify-center px-0' : 'justify-start px-3'} ${
         active 
           ? 'border-accent/45 bg-[linear-gradient(90deg,rgba(214,180,93,0.18),rgba(220,38,38,0.07)_58%,rgba(20,20,23,0.72))] text-accent shadow-[inset_3px_0_0_#d6b45d,0_10px_28px_rgba(0,0,0,0.16)]' 
           : 'border-transparent text-finance-500 hover:border-accent/20 hover:bg-finance-50 hover:text-accent'
       }`}
     >
-      <span className="shrink-0 text-inherit transition-colors">
+      <span className="sidebar-nav-icon shrink-0 text-inherit transition-colors">
         {icon}
       </span>
-      <span className={`${collapsed ? 'ml-0 max-w-0 opacity-0' : 'ml-3 max-w-40 flex-1 opacity-100'} min-w-0 truncate transition-[margin,max-width,opacity] duration-200 ease-out`}>
+      <span className={`sidebar-nav-label ${collapsed ? 'ml-0 max-w-0 opacity-0' : 'ml-3 max-w-40 flex-1 opacity-100'} min-w-0 truncate transition-[margin,max-width,opacity] duration-200 ease-out`}>
         {label}
       </span>
       {hasCount && (
@@ -408,15 +416,15 @@ function App() {
   }, []);
 
   if (sessionQuery.isLoading) {
-    return <AppLoader fullScreen label="Memuat sesi..." />;
+    return <AppLoader fullScreen label="Memuat sesi" variant="initial" />;
   }
 
   if (isPersistedSessionIdle) {
-    return <AppLoader fullScreen label="Mengakhiri sesi..." />;
+    return <AppLoader fullScreen label="Mengakhiri sesi" />;
   }
 
   if (session && isOpeningAdmin) {
-    return <AppLoader fullScreen label="Menyiapkan dashboard..." />;
+    return <AppLoader fullScreen label="Membuka Hypercard" variant="initial" />;
   }
 
   if (!session) {

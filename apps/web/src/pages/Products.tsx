@@ -7,6 +7,7 @@ import SideDrawer from '../components/SideDrawer';
 import { useFeedback } from '../components/Feedback';
 import { getRarityCode, getRarityLabel, rarityOptions } from '../lib/rarity';
 import PokemonCardPicker from '../components/PokemonCardPicker';
+import { ProductGridSkeleton } from '../components/LoadingSkeleton';
 import type { PokemonTcgCard } from '../lib/pokemonTcg';
 import CurrencyInput from '../components/CurrencyInput';
 import { useProductMutations, useProducts } from '../hooks/useApiQueries';
@@ -339,9 +340,7 @@ export default function Products() {
       </div>
 
       {productsQuery.isLoading ? (
-        <div className="rounded-lg border border-dashed border-finance-200 py-14 text-center text-sm text-finance-500">
-          Memuat produk...
-        </div>
+        <ProductGridSkeleton />
       ) : filteredProducts.length === 0 ? (
         <div className="rounded-lg border border-dashed border-finance-200 py-14 text-center text-sm text-finance-500">
           Tidak ada produk ditemukan.

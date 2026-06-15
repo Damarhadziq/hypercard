@@ -13,6 +13,7 @@ import { calculateInvoiceSubtotal, calculateInvoiceTotal } from '../lib/invoiceU
 import { getRarityCode } from '../lib/rarity';
 import { useCustomers, useProducts, useTransactionMutations, useTransactions } from '../hooks/useApiQueries';
 import { emptyInvoiceShipping } from '../services/shipping';
+import { InvoiceFormSkeleton } from '../components/LoadingSkeleton';
 
 const cardGradientByName: Record<string, string> = {
   pikachu: 'from-yellow-200 via-amber-300 to-orange-400',
@@ -262,6 +263,7 @@ export default function Invoices() {
   const visibleItems = isItemListExpanded ? items : items.slice(0, 2);
   const hiddenItemCount = Math.max(0, items.length - 2);
   const isSavingInvoice = isInvoiceSubmitting || createTransaction.isPending || updateTransactionStatus.isPending;
+  const isInvoiceDataLoading = productsQuery.isLoading || customersQuery.isLoading || transactionsQuery.isLoading;
   const recentProductIds = new Set(products.slice(-3).map((product) => product.id));
   const recentCustomerIds = new Set(customers.slice(-3).map((customer) => customer.id));
   const customerTransactionCounts = transactions.reduce<Record<string, number>>((acc, transaction) => {
@@ -435,6 +437,9 @@ export default function Invoices() {
         </div>
       </div>
 
+      {isInvoiceDataLoading ? (
+        <InvoiceFormSkeleton />
+      ) : (
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
           <Card className="animate-soft-in">
@@ -713,6 +718,7 @@ export default function Invoices() {
           </Card>
         </div>
       </div>
+      )}
     </div>
   );
 }

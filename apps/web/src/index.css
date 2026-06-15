@@ -261,6 +261,24 @@
     }
   }
 
+  @keyframes app-loader-page-shimmer {
+    from {
+      background-position: 180% 50%;
+    }
+    to {
+      background-position: -80% 50%;
+    }
+  }
+
+  @keyframes app-skeleton-shimmer {
+    from {
+      transform: translateX(-120%);
+    }
+    to {
+      transform: translateX(220%);
+    }
+  }
+
   @keyframes app-new-transaction-pulse {
     0%,
     100% {
@@ -370,38 +388,54 @@
     will-change: color, filter, transform;
   }
 
-  .app-loader-track {
-    width: 8.5rem;
-    height: 1px;
-    margin-top: 1rem;
+  .app-loader-page-wordmark {
+    background: linear-gradient(
+      105deg,
+      rgba(255, 255, 255, 0.32) 20%,
+      #ffffff 40%,
+      #f0d27b 50%,
+      #ffffff 60%,
+      rgba(255, 255, 255, 0.32) 80%
+    );
+    background-position: 180% 50%;
+    background-size: 260% 100%;
+    background-clip: text;
+    color: transparent;
+    font-family: 'Funnel Display', sans-serif;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    line-height: 1;
+    animation: app-loader-page-shimmer 1.65s linear infinite;
+    -webkit-background-clip: text;
+  }
+
+  .app-skeleton {
+    position: relative;
     overflow: hidden;
-    border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.055);
   }
 
-  .app-loader-track span {
-    display: block;
-    width: 38%;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, transparent, #d6b45d, transparent);
-    animation: app-loader-track 1.55s ease-in-out infinite;
-  }
-
-  .app-loader-label {
-    margin-top: 0.75rem;
-    color: rgba(255, 255, 255, 0.58);
-    font-size: 0.6875rem;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    animation: app-loader-label 1.55s ease-in-out infinite;
+  .app-skeleton::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 10%,
+      rgba(214, 180, 93, 0.08) 38%,
+      rgba(255, 255, 255, 0.13) 50%,
+      rgba(214, 180, 93, 0.08) 62%,
+      transparent 90%
+    );
+    content: '';
+    transform: translateX(-120%);
+    animation: app-skeleton-shimmer 1.45s ease-in-out infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
     .app-loader-letter,
-    .app-loader-track span,
-    .app-loader-label {
+    .app-loader-page-wordmark,
+    .app-skeleton::after {
       animation: none;
     }
 
@@ -411,13 +445,10 @@
       transform: none;
     }
 
-    .app-loader-track span {
-      width: 100%;
-      background: rgba(214, 180, 93, 0.72);
-    }
-
-    .app-loader-label {
-      opacity: 0.72;
+    .app-loader-page-wordmark {
+      background: none;
+      color: #f0d27b;
+      -webkit-text-fill-color: #f0d27b;
     }
   }
 
@@ -457,6 +488,19 @@
   .interactive-click:active > *,
   .ui-button:not(:disabled):active > * {
     scale: 0.96;
+  }
+
+  .sidebar-nav-icon,
+  .sidebar-nav-label {
+    transform-origin: center;
+    transition:
+      transform 110ms ease,
+      color 150ms ease;
+  }
+
+  .sidebar-nav-item:active .sidebar-nav-icon,
+  .sidebar-nav-item:active .sidebar-nav-label {
+    transform: scale(0.92);
   }
 
   .select-trigger,

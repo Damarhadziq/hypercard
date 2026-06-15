@@ -10,6 +10,7 @@ import type { ReportPeriod } from '../lib/generateReport';
 import { customersService } from '../services/customers';
 import { productsService } from '../services/products';
 import { transactionsService } from '../services/transactions';
+import { DashboardSkeleton } from '../components/LoadingSkeleton';
 
 const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -401,11 +402,7 @@ export default function Dashboard() {
       </div>
 
       {isLoading && (
-        <div className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 xl:grid-cols-4" role="status" aria-label="Memuat ringkasan penjualan">
-          {[0, 1, 2, 3].map((item) => (
-            <div key={item} className="h-32 animate-pulse rounded-xl border border-finance-200 bg-finance-50" />
-          ))}
-        </div>
+        <DashboardSkeleton />
       )}
 
       {!isLoading && !summaryQuery.data?.hasCurrentData && (

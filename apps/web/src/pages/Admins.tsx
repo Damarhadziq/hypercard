@@ -7,6 +7,7 @@ import { useFeedback } from '../components/Feedback';
 import Pagination from '../components/Pagination';
 import { useAdminMutations, useAdmins } from '../hooks/useApiQueries';
 import useClampedPage from '../hooks/useClampedPage';
+import { TableSkeletonRows } from '../components/LoadingSkeleton';
 
 function formatLoginDate(value?: string) {
   if (!value) return '-';
@@ -170,11 +171,7 @@ export default function Admins() {
               </TableHeader>
               <TableBody>
                 {adminsQuery.isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-finance-500">
-                      Memuat admin...
-                    </TableCell>
-                  </TableRow>
+                  <TableSkeletonRows columns={6} rows={6} widths={['w-40', 'w-20', 'w-20', 'w-32', 'w-56', 'ml-auto w-24']} />
                 ) : admins.map((admin) => (
                   <TableRow key={admin.id}>
                     <TableCell className="min-w-56">
@@ -231,17 +228,19 @@ export default function Admins() {
                 ))}
               </TableBody>
             </Table>
-            <Pagination
-              page={page}
-              pageSize={pageSize}
-              totalItems={totalItems}
-              totalPages={totalPages}
-              onPageChange={setPage}
-              onPageSizeChange={(nextPageSize) => {
-                setPageSize(nextPageSize);
-                setPage(1);
-              }}
-            />
+            {!adminsQuery.isLoading && (
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={(nextPageSize) => {
+                  setPageSize(nextPageSize);
+                  setPage(1);
+                }}
+              />
+            )}
           </div>
         </CardContent>
       </Card>

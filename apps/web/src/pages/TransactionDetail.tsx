@@ -11,6 +11,7 @@ import { useTransaction, useTransactionMutations } from '../hooks/useApiQueries'
 import { downloadInvoicePdf } from '../lib/invoicePdf';
 import type { UpdateTransactionStatusInput } from '../services/types';
 import { useStore, type PaymentMethod, type Transaction } from '../store/useStore';
+import { DetailPageSkeleton } from '../components/LoadingSkeleton';
 
 function getDetailCustomer(transaction: Transaction) {
   return {
@@ -35,11 +36,7 @@ export default function TransactionDetail() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(transaction?.paymentMethod ?? 'Mandiri');
 
   if (transactionQuery.isLoading) {
-    return (
-      <div className="animate-soft-in rounded-lg border border-finance-200 bg-white p-6">
-        <p className="text-sm text-finance-500">Memuat transaksi...</p>
-      </div>
-    );
+    return <DetailPageSkeleton />;
   }
 
   if (!transaction) {

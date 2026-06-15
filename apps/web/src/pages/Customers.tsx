@@ -9,6 +9,7 @@ import { useCustomerMutations, useCustomers } from '../hooks/useApiQueries';
 import useClampedPage from '../hooks/useClampedPage';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import AddressPicker, { type AddressPickerValue } from '../components/AddressPicker';
+import { MobileListSkeleton, TableSkeletonRows } from '../components/LoadingSkeleton';
 import { joinAddress, splitStoredAddress } from '../lib/indonesiaLocations';
 
 export default function Customers() {
@@ -169,9 +170,7 @@ export default function Customers() {
         <CardContent>
           <div className="space-y-3 md:hidden">
             {customersQuery.isLoading ? (
-              <div className="rounded-lg border border-dashed border-finance-200 py-10 text-center text-sm text-finance-500">
-                Memuat pembeli...
-              </div>
+              <MobileListSkeleton />
             ) : customers.length === 0 ? (
               <div className="rounded-lg border border-dashed border-finance-200 py-10 text-center text-sm text-finance-500">
                 Tidak ada pembeli ditemukan.
@@ -238,11 +237,7 @@ export default function Customers() {
             </TableHeader>
             <TableBody>
               {customersQuery.isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-finance-500 py-8">
-                    Memuat pembeli...
-                  </TableCell>
-                </TableRow>
+                <TableSkeletonRows columns={5} rows={6} widths={['w-32', 'w-28', 'w-full', 'w-36', 'ml-auto w-20']} />
               ) : customers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-finance-500 py-8">
@@ -292,17 +287,19 @@ export default function Customers() {
             </TableBody>
             </Table>
           </div>
-          <Pagination
-            page={page}
-            pageSize={pageSize}
-            totalItems={totalItems}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            onPageSizeChange={(nextPageSize) => {
-              setPageSize(nextPageSize);
-              setPage(1);
-            }}
-          />
+          {!customersQuery.isLoading && (
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+            />
+          )}
         </CardContent>
       </Card>
 

@@ -11,6 +11,7 @@ import Pagination from '../components/Pagination';
 import { customersService } from '../services/customers';
 import { productsService } from '../services/products';
 import { transactionsService } from '../services/transactions';
+import { DashboardSkeleton, MobileListSkeleton, TableSkeletonRows } from '../components/LoadingSkeleton';
 import {
   calculateCostBreakdown,
   formatPercentage,
@@ -743,6 +744,10 @@ export default function Reports() {
         </div>
       </div>
 
+      {isLoading ? (
+        <DashboardSkeleton />
+      ) : (
+      <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Total Omzet" value={`Rp ${totalSold.toLocaleString('id-ID')}`} trend={period.mode === 'all' ? undefined : formatPercentDelta(totalSold, previousSold)} isPositive={totalSold >= previousSold} isNeutral={totalSold === previousSold} icon={<TrendingUp size={18} />} iconTone="border-rose-400/35 bg-rose-500/10 text-rose-400 shadow-[0_0_14px_rgba(251,113,133,0.16)]" />
         <MetricCard title="Item Terjual" value={totalItems.toLocaleString('id-ID')} trend={period.mode === 'all' ? undefined : formatNumberDelta(totalItems, previousItems)} isPositive={totalItems >= previousItems} isNeutral={totalItems === previousItems} icon={<Package size={18} />} iconTone="border-sky-400/35 bg-sky-500/10 text-sky-400 shadow-[0_0_14px_rgba(56,189,248,0.16)]" />
@@ -828,7 +833,7 @@ export default function Reports() {
 
           <div className="md:hidden">
             {isTableLoading ? (
-              <p className="py-8 text-center text-sm text-finance-500">Memuat laporan...</p>
+              <MobileListSkeleton />
             ) : paginatedRows.length === 0 ? (
               <p className="py-8 text-center text-sm text-finance-500">Tidak ada data laporan untuk filter ini.</p>
             ) : (
@@ -886,9 +891,7 @@ export default function Reports() {
               </TableHeader>
               <TableBody>
                 {isTableLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-finance-500">Memuat laporan...</TableCell>
-                  </TableRow>
+                  <TableSkeletonRows columns={6} rows={6} widths={['w-24', 'w-full', 'ml-auto w-12', 'ml-auto w-24', 'ml-auto w-24', 'w-28']} />
                 ) : paginatedRows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="py-8 text-center text-finance-500">Tidak ada transaksi lunas untuk filter ini.</TableCell>
@@ -911,19 +914,23 @@ export default function Reports() {
             </Table>
           </div>
 
-          <Pagination
-            page={page}
-            pageSize={pageSize}
-            totalItems={paginatedTotalItems}
-            totalPages={paginatedTotalPages}
-            onPageChange={setPage}
-            onPageSizeChange={(nextPageSize) => {
-              setPageSize(nextPageSize);
-              setPage(1);
-            }}
-          />
+          {!isTableLoading && (
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              totalItems={paginatedTotalItems}
+              totalPages={paginatedTotalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+            />
+          )}
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   );
 }

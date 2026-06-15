@@ -5,6 +5,7 @@ import InvoicePrint from '../components/InvoicePrint';
 import { useTransaction } from '../hooks/useApiQueries';
 import { downloadInvoicePdf } from '../lib/invoicePdf';
 import { useStore } from '../store/useStore';
+import { DetailPageSkeleton } from '../components/LoadingSkeleton';
 
 export default function InvoicePrintPage() {
   const { id } = useParams();
@@ -30,8 +31,10 @@ export default function InvoicePrintPage() {
 
   if (transactionQuery.isLoading) {
     return (
-      <main className="premium-dark flex min-h-screen items-center justify-center bg-[#070708] p-6 text-white">
-        <p className="text-sm text-finance-500">Memuat invoice...</p>
+      <main className="premium-dark min-h-screen bg-[#070708] p-6 text-white">
+        <div className="mx-auto max-w-7xl">
+          <DetailPageSkeleton />
+        </div>
       </main>
     );
   }

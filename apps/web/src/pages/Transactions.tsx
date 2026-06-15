@@ -10,6 +10,7 @@ import SideDrawer from '../components/SideDrawer';
 import CleanSelect from '../components/CleanSelect';
 import CurrencyInput from '../components/CurrencyInput';
 import PokemonCardPicker from '../components/PokemonCardPicker';
+import { MobileListSkeleton, TableSkeletonRows } from '../components/LoadingSkeleton';
 import { useCustomers, useProductMutations, useTransactionMutations, useTransactions } from '../hooks/useApiQueries';
 import useClampedPage from '../hooks/useClampedPage';
 import useDebouncedValue from '../hooks/useDebouncedValue';
@@ -65,47 +66,6 @@ const transactionStatusOptions: Array<{ value: TransactionStatusFilter; label: s
   { value: 'Lunas', label: 'Lunas' },
   { value: 'Belum Dibayar', label: 'Belum Dibayar' },
 ];
-
-function SkeletonBar({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-md bg-finance-100 ${className}`} aria-hidden="true" />;
-}
-
-function MobileTransactionSkeleton() {
-  return (
-    <div className="divide-y divide-finance-100" aria-hidden="true">
-      {Array.from({ length: 4 }, (_, index) => (
-        <div key={index} className="grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_auto] items-center gap-3 py-4">
-          <div className="space-y-2">
-            <SkeletonBar className="h-2.5 w-16" />
-            <SkeletonBar className="h-4 w-28 max-w-full" />
-          </div>
-          <div className="space-y-2">
-            <SkeletonBar className="h-2.5 w-10" />
-            <SkeletonBar className="h-4 w-20 max-w-full" />
-          </div>
-          <SkeletonBar className="h-8 w-20" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function DesktopTransactionSkeleton() {
-  return (
-    <>
-      {Array.from({ length: 5 }, (_, index) => (
-        <TableRow key={index} aria-hidden="true">
-          <TableCell><SkeletonBar className="h-4 w-32" /></TableCell>
-          <TableCell><SkeletonBar className="h-4 w-28" /></TableCell>
-          <TableCell><SkeletonBar className="h-4 w-24" /></TableCell>
-          <TableCell><SkeletonBar className="ml-auto h-4 w-24" /></TableCell>
-          <TableCell><SkeletonBar className="h-8 w-28 rounded-lg" /></TableCell>
-          <TableCell><SkeletonBar className="ml-auto h-8 w-20" /></TableCell>
-        </TableRow>
-      ))}
-    </>
-  );
-}
 
 function ManualTransactionDrawer({
   form,
@@ -590,7 +550,7 @@ export default function Transactions() {
         <CardContent>
           <div className="md:hidden">
             {transactionsQuery.isLoading ? (
-              <MobileTransactionSkeleton />
+              <MobileListSkeleton />
             ) : transactions.length === 0 ? (
               <p className="py-8 text-center text-sm text-finance-500">Tidak ada transaksi ditemukan.</p>
             ) : (
@@ -634,7 +594,7 @@ export default function Transactions() {
               </TableHeader>
               <TableBody>
                 {transactionsQuery.isLoading ? (
-                  <DesktopTransactionSkeleton />
+                  <TableSkeletonRows columns={6} rows={6} widths={['w-32', 'w-28', 'w-24', 'ml-auto w-24', 'w-28', 'ml-auto w-20']} />
                 ) : transactions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="py-8 text-center text-finance-500">
