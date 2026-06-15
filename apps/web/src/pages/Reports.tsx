@@ -220,10 +220,10 @@ function MetricCard({
   iconTone: string;
 }) {
   const trendTone = isNeutral
-    ? 'border-finance-300 bg-finance-100 text-finance-500'
+    ? 'text-finance-500'
     : isPositive
-      ? 'border-green-500/25 bg-green-500/10 text-green-500'
-      : 'border-red-500/25 bg-red-500/10 text-red-500';
+      ? 'text-green-500'
+      : 'text-red-500';
 
   const content = (
     <Card className={`h-full overflow-hidden transition-all ${active ? 'border-accent/70 bg-accent/10 shadow-[inset_0_0_0_1px_rgba(214,180,93,0.22)]' : ''}`}>
@@ -235,10 +235,10 @@ function MetricCard({
           </span>
         </div>
         <div className="min-w-0">
-          <div className="flex min-w-0 items-baseline gap-1.5">
+          <div className="flex min-w-0 items-baseline gap-2">
             <p className="whitespace-nowrap text-lg font-extrabold text-finance-950 2xl:text-2xl">{value}</p>
             {trend && (
-              <p className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-extrabold 2xl:text-xs ${trendTone}`}>
+              <p className={`shrink-0 whitespace-nowrap text-[11px] font-extrabold 2xl:text-xs ${trendTone}`}>
                 {trend}
               </p>
             )}
