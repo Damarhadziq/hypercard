@@ -101,12 +101,6 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
     <div className="premium-dark flex h-screen min-h-0 w-full max-w-full overflow-hidden bg-[#070708] font-sans text-finance-900">
       {/* Sidebar */}
       <aside className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} relative hidden h-screen shrink-0 flex-col overflow-hidden border-r border-finance-200 bg-white transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] md:flex`}>
-        <img
-          src="/hypercard-logo.png"
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-1/2 h-full w-[190%] max-w-none -translate-x-1/2 object-cover opacity-[0.045]"
-        />
         <div className={`${isSidebarCollapsed ? 'justify-center px-4' : 'justify-between px-6'} relative z-10 flex h-16 items-center border-b border-finance-100 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}>
           {isSidebarCollapsed ? (
             <button
@@ -145,9 +139,18 @@ function AppLayout({ children, session, onLogout }: { children: React.ReactNode;
           )}
         </nav>
         <div className={`${isSidebarCollapsed ? 'px-3 text-center' : 'px-6'} relative z-10 border-t border-finance-200 py-4 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}>
-          <p className="text-[11px] font-medium leading-relaxed text-finance-500">
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-start gap-2'}`}>
+            <p className="text-[11px] font-medium leading-relaxed text-finance-500">
             {isSidebarCollapsed ? '©' : '© 2026 dmrhdz.iq'}
-          </p>
+            </p>
+            {!isSidebarCollapsed && (
+              <img
+                src="/hypercard-footer-logo.svg"
+                alt="Hypercard"
+                className="h-[18px] w-[18px] shrink-0 object-contain"
+              />
+            )}
+          </div>
         </div>
       </aside>
 
